@@ -9,8 +9,8 @@ automations never silently stop working. (The bubbles on top live in
 
 | Event type | Fired for |
 |---|---|
-| `jonr_vac_error` | Robot-side faults (prop 1.3-class `fault`) |
-| `jonr_vac_station_error` | Dock faults (`station_error`, the 45xx/49xx codes) |
+| `jonr_local_error` | Robot-side faults (prop 1.3-class `fault`) |
+| `jonr_local_station_error` | Dock faults (`station_error`, the 45xx/49xx codes) |
 
 Payload, for both:
 
@@ -30,14 +30,14 @@ returning to healthy clears the bubble but fires no event.
 
 ## Listening
 
-Automations editor: **Trigger type → Event**, event type `jonr_vac_error`.
+Automations editor: **Trigger type → Event**, event type `jonr_local_error`.
 YAML:
 
 ```yaml
 automation:
   - trigger:
       - trigger: event
-        event_type: jonr_vac_error
+        event_type: jonr_local_error
     action:
       - action: notify.mobile_app_your_phone
         data:
@@ -56,7 +56,7 @@ action: script.log_events
 
 ## Code table
 
-Robot codes (`jonr_vac_error`):
+Robot codes (`jonr_local_error`):
 
 | Code | Slug | Meaning |
 |---|---|---|
@@ -86,8 +86,8 @@ Robot codes (`jonr_vac_error`):
 | 4902 | `drain_failed` | Drain failed |
 | 4903 | `solution_low` | Cleaning solution low |
 
-The dock codes (45xx, 49xx) arrive on `jonr_vac_station_error`; robot codes
-(40xx) on `jonr_vac_error`.
+The dock codes (45xx, 49xx) arrive on `jonr_local_station_error`; robot codes
+(40xx) on `jonr_local_error`.
 
 ## Related sensors
 

@@ -29,7 +29,7 @@ verbatim so it stays diffable against the plugin; the 4902/4903 pictures are
 crossed there, filenames included, exactly as the vendor ships them.
 
 The bubbles reference the files as plain same-origin markdown URLs on the
-integration's own static path (`/jonr-vac-card/images/faults/…`) — no base64
+integration's own static path (`/jonr-local-card/images/faults/…`) — no base64
 in the message, no extra HTTP surface, and the images work whether or not
 you are signed in. Codes the plugin table does not cover simply get no
 picture; the label and fix-it text still arrive.
@@ -63,7 +63,7 @@ below it is localized.
 > **Notifications when the robot or the dock report an error**
 
 On by default. Turning it off stops the bubbles — the
-[`jonr_vac_error` / `jonr_vac_station_error` events](EVENTS.md) keep firing,
+[`jonr_local_error` / `jonr_local_station_error` events](EVENTS.md) keep firing,
 so automations are unaffected. (Same split as dreame-vacuum's notification
 option.)
 
@@ -78,13 +78,13 @@ installed and notify enabled:
 automation:
   - trigger:
       - trigger: event
-        event_type: jonr_vac_error
+        event_type: jonr_local_error
       - trigger: event
-        event_type: jonr_vac_station_error
+        event_type: jonr_local_station_error
     vars:
       sensor_id: >-
         {{ 'sensor.YOUR_STATION_ERROR_SENSOR'
-           if trigger.event.event_type == 'jonr_vac_station_error'
+           if trigger.event.event_type == 'jonr_local_station_error'
            else 'sensor.YOUR_ROBOT_ERROR_SENSOR' }}
       label: "{{ state_attr(sensor_id, 'label') or '' }}"
       solution: "{{ state_attr(sensor_id, 'solution') or '' }}"
@@ -111,7 +111,7 @@ automation:
             # host. Empty string = no picture on codes the plugin has no
             # drawing for.
             image: >-
-              {{ '/jonr-vac-card/images/faults/' ~ image if image else '' }}
+              {{ '/jonr-local-card/images/faults/' ~ image if image else '' }}
 ```
 
 A stable `tag` plus `ttl: 0` makes a repeated error replace its own

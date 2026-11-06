@@ -2,12 +2,12 @@
 
 # Services
 
-Ten services sit on the `jonr_vac` domain, all **targeted at the vacuum
+Ten services sit on the `jonr_local` domain, all **targeted at the vacuum
 entity** (they are registered as entity services, so Dev Services → Actions
 and the automation editor ask for a `target: entity_id`). Call them like:
 
 ```yaml
-action: jonr_vac.clean_segment
+action: jonr_local.clean_segment
 target:
   entity_id: vacuum.your_vacuum
 data:
@@ -156,7 +156,7 @@ preloaded on the robot — the bucket no longer serves it). Install English
 over the top of the current pack, for example:
 
 ```yaml
-action: jonr_vac.install_voice_pack
+action: jonr_local.install_voice_pack
 target:
   entity_id: vacuum.your_vacuum
 data:
@@ -168,3 +168,27 @@ data:
 (`lang` = the `audio.conf` Id: 1 chinese, 2 english, 3 russian, 4 german,
 5 italian, 6 french, 7 polish, 8 spanish, 9 korean, 10 chinese_tw,
 11 vietnamese — the same codes as the `voice_language` select.)
+
+## Fully local mode (fork)
+
+### `import_map` — store the saved map copy
+
+Only on a *Device IP & token + saved map* entry. Stores a map file downloaded
+once with `tools/dump_map.py`. `tools/push_map.py` calls this service for you.
+The response returns `map_id`, `map_name`, `rooms` (room_id → name),
+`room_area_m2`, `sha256` and `rooms_added` / `rooms_removed` compared with the
+previous copy.
+
+| Field | Type | Notes |
+|---|---|---|
+| `map_raw` | string | Content of `map_raw.json`. |
+| `map_infos_raw` | string, optional | Content of `map_infos_raw.json` (map names). |
+| `source` | string, optional | Free text stored with the copy. |
+
+Behaviour of the other services on such an entry:
+- `clean_segment` refuses room ids that are not in the saved copy.
+- `set_room_info` is refused (17.15 is broken over the LAN on firmware 4.5.6).
+- `refresh_map` is refused. Refresh with `dump_map.py` + `push_map.py` instead.
+- Writes from `set_room_clean_mode` / `reset_room_clean_modes` are mirrored into the saved copy.
+
+See [Fully local mode](LOCAL_MODE.md).

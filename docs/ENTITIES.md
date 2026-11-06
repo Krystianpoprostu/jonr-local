@@ -86,5 +86,15 @@ Seven consumable-life resets — `reset_main_brush`, `reset_side_brush`,
   every room-based service consumes), the `station_icon` drawn on the dock
   (`wash` / `collect` / `dry` / `charge` / `normal` — the Mi Home activity
   glyph, [Map card](MAP_CARD.md)), plus map and trim metadata. The raw
-  vector JSON is served at `/api/jonr_vac/map/<target>` for the companion
+  vector JSON is served at `/api/jonr_local/map/<target>` for the companion
   card ([Map card](MAP_CARD.md)).
+
+## Fully local mode (fork)
+
+| Entity | Notes |
+|---|---|
+| `sensor.<name>_last_clean` (pl: `…_ostatnie_sprzatanie`) | Coverage % of the last finished task. Attributes hold the full record (rooms, area, expected area, dock returns, errors, times). Only on *saved map* entries. |
+| `camera.<name>_map` | Served from the saved copy. No live robot position. |
+| Active map select | Not created on *saved map* entries. |
+
+See [Fully local mode](LOCAL_MODE.md).

@@ -19,13 +19,13 @@ vacuum: vacuum.your_vacuum
 Map-forward dashboard: swipe between the vacuum image and the map, status
 and battery chrome, room tinting from the live vector, and control tray
 (water/fan/active-map selects). Map data comes from the integration's vector
-endpoint; the card needs a **cloud** entry (the map pipeline is cloud-fed —
+endpoint; it works with a *saved map* entry (fully local, see [Fully local mode](LOCAL_MODE.md)) or a **cloud** entry (live map —
 see [Installation](INSTALLATION.md)).
 
 ## The vector endpoint
 
 ```text
-GET /api/jonr_vac/map/<entry_id>
+GET /api/jonr_local/map/<entry_id>
 ```
 
 The latest vector map JSON. `<entry_id>` is the config-entry id (the card

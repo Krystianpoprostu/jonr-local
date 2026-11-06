@@ -1,0 +1,8 @@
+# One-time helper tools (token, map dump/import, probes) — not needed by Home Assistant itself.
+python-miio @ git+https://github.com/rytilahti/python-miio.git
+pycryptodome
+requests
+Pillow
+# deps of PiotrMachowski/Xiaomi-cloud-tokens-extractor (cloned to ../third_party/)
+charset-normalizer
+colorama

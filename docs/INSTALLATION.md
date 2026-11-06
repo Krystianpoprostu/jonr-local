@@ -2,6 +2,9 @@
 
 # Installation
 
+> **Recommended:** the fully local path *Device IP & token + saved map*, see
+> [Fully local mode](LOCAL_MODE.md). This page also covers the upstream cloud paths.
+
 ## Requirements
 
 - Home Assistant **2024.12.0** or newer (`hacs.json` minimum).
@@ -17,17 +20,17 @@
 
 1. In HACS → **Integrations** → ⋮ → **Add custom repository**, use this
    repository URL with category **Integration**.
-2. Install **JONR Vacuum**, then restart Home Assistant.
+2. Install **JONR Local**, then restart Home Assistant.
 
 ## Install manually
 
-Copy `custom_components/jonr_vac/` into your Home Assistant `config/`
+Copy `custom_components/jonr_local/` into your Home Assistant `config/`
 directory (so the file lands at
-`config/custom_components/jonr_vac/manifest.json`), then restart.
+`config/custom_components/jonr_local/manifest.json`), then restart.
 
 ## Add the integration
 
-Settings → **Devices & Services** → **Add Integration** → **JONR Vacuum**.
+Settings → **Devices & Services** → **Add Integration** → **JONR Local**.
 Pick a setup path:
 
 - **Email & password** — sign in with your Mi Home account (the region and,

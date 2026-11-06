@@ -4,7 +4,7 @@
 
 Entity names, select options, sensor states (including every error label),
 config-flow steps and service descriptions resolve from
-`custom_components/jonr_vac/translations/`. Any label Home Assistant cannot
+`custom_components/jonr_local/translations/`. Any label Home Assistant cannot
 find falls back to English — a missing translation never leaves an entity
 nameless.
 

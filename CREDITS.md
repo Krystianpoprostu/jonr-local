@@ -13,7 +13,7 @@ coordinators, all entity platforms, the map cache, the HTTP map endpoint and
 the Lovelace card integration. This fork keeps the cloud path, prunes every
 non-xtl brand profile, and adds the xtl (JONR) profile layer on top of that
 base. The upstream license text is preserved verbatim in `LICENSE.xiaomi-vac`;
-the `Domain: xiaomi_vac` → `jonr_vac` rename, the profile pruning
+the `Domain: xiaomi_vac` → `jonr_local` rename, the profile pruning
 (dreame/viomi/roidmi/ijai/xiaomi) and the xtl-specific code are this fork's
 changes.
 
@@ -52,3 +52,31 @@ MIT license applies to this repository's own code only.
 
 All imported as dependencies, never vendored. See each project's license for
 their terms.
+
+## This fork: fully local mode
+
+Fork changes (MIT, like the rest of this repository): the *saved map* setup path
+(`saved_map.py`), the last-clean log (`clean_log.py`), the `import_map` service,
+the guards for local-only entries, the fix in `vacuum._xtl_map_context` (rooms
+dict) and the `tools/`, `docs/` and `tests/` files that come with them. The
+evidence behind every local-vs-cloud claim is in `docs/FINDINGS.md`.
+
+## PiotrMachowski/Xiaomi-cloud-tokens-extractor — token / QR login (MIT)
+
+<https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor>
+
+`tools/get_token.py` and `tools/dump_map.py` load `token_extractor.py` at
+runtime from a separate clone in `../third_party/` (its QR login was the one
+that completed against this account). Nothing from it is vendored here; the
+wrappers only add "never print the token" handling on top.
+
+## MIoT spec — `docs/spec/xtl.vacuum.xm2216.v4.json`
+
+A copy of the public device spec served by <https://miot-spec.org>
+(`urn:miot-spec-v2:device:vacuum:0000A006:xtl-xm2216:4`), kept so the probe
+tools and the docs tables can run offline. The spec belongs to its publisher.
+
+## python-miio in the tools
+
+The tools import python-miio (GPL-3.0) as an installed dependency, the same way
+the integration does. Nothing is copied or vendored.
