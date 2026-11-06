@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-11-07
+
+- Fix hassfest validation: the guide link in the *Device IP & token + saved map*
+  step is now a description placeholder instead of a URL inside the string.
+
 ## 0.2.0 — 2026-11-07
 
 Guided setup inside Home Assistant — no terminal needed.

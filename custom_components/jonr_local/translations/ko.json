@@ -81,7 +81,7 @@
       },
       "local_map": {
         "title": "Fully local connection",
-        "description": "IP address and 32-character token. Everything runs over your LAN. You get the token with the guide's tools (https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md); afterwards load the map with **Configure → Download the map from your Xiaomi account**. Easier: go back and choose **Xiaomi account once → fully local**.",
+        "description": "IP address and 32-character token. Everything runs over your LAN. You get the token with the guide's tools ({guide_url}); afterwards load the map with **Configure → Download the map from your Xiaomi account**. Easier: go back and choose **Xiaomi account once → fully local**.",
         "data": {
           "host": "IP address",
           "token": "Token",

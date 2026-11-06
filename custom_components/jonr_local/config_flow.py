@@ -57,6 +57,8 @@ from .spec.registry import is_supported
 
 _LOGGER = logging.getLogger(__name__)
 
+GUIDE_URL = "https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md"
+
 CRED_SCHEMA = vol.Schema(
     {vol.Required(CONF_USERNAME): cv.string, vol.Required(CONF_PASSWORD): cv.string}
 )
@@ -256,6 +258,7 @@ class JonrVacuumConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id=step_id,
             data_schema=LOCAL_MAP_SCHEMA if step_id == "local_map" else LOCAL_SCHEMA,
             errors=errors,
+            description_placeholders={"guide_url": GUIDE_URL},
         )
 
     # --- reauth: cloud session died and passToken renewal failed --------

@@ -80,7 +80,7 @@
       },
       "local_map": {
         "title": "Połączenie w pełni lokalne",
-        "description": "Adres IP i 32-znakowy token. Wszystko działa w sieci lokalnej. Token pobierzesz narzędziami z instrukcji (https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md); mapę wczytasz potem przez **Konfiguruj → Pobierz mapę z konta Xiaomi**. Prościej: wróć i wybierz **Konto Xiaomi jednorazowo → w pełni lokalnie**.",
+        "description": "Adres IP i 32-znakowy token. Wszystko działa w sieci lokalnej. Token pobierzesz narzędziami z instrukcji ({guide_url}); mapę wczytasz potem przez **Konfiguruj → Pobierz mapę z konta Xiaomi**. Prościej: wróć i wybierz **Konto Xiaomi jednorazowo → w pełni lokalnie**.",
         "data": {
           "host": "Adres IP",
           "token": "Token",
