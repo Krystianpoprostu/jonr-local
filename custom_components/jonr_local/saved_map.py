@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -32,6 +33,11 @@ _LOGGER = logging.getLogger(__name__)
 
 STORAGE_VERSION = 1
 _STORAGE_KEY_FMT = f"{DOMAIN}_saved_map_{{entry_id}}"
+
+# Entry-data key the config flow uses to hand over a map downloaded during
+# setup; imported into the Store on first load, then removed from the entry.
+PENDING_MAP_KEY = "pending_map"
+ISSUE_MAP_MISSING = "saved_map_missing_{entry_id}"
 
 # 17.53 payload keys -> the `prefer` keys the map file carries per room.
 _PREFER_FROM_PAYLOAD = {"K": "mode", "F": "wind", "W": "water", "C": "count", "D": "drag"}
@@ -87,6 +93,37 @@ def build_view(raw_map: bytes, raw_infos: bytes | None = None,
     )
 
 
+def download_map_once(cloud, server: str, did: str, device: XtlVacuumDevice) -> tuple[str, str | None]:
+    """Blocking one-shot map download (setup / options flow only, never at runtime).
+
+    The robot names its map files over the LAN (17.12 map, 17.13 catalogue —
+    it may stay blocked from the internet: the files were uploaded earlier);
+    the logged-in cloud session mints signed URLs and downloads them once.
+    Returns (map_raw, map_infos_raw) as text; raises ValueError with a
+    user-facing reason.
+    """
+    try:
+        map_obj = device.map_obj_name()
+        device.map_list()                      # stashes the catalogue file name
+    except Exception as err:  # noqa: BLE001
+        raise ValueError(f"the robot did not answer over the LAN ({err})") from err
+    if not map_obj:
+        raise ValueError("the robot has no map yet — map your home in the Mi Home app first")
+    infos_obj = device.last_map_infos_file
+
+    def fetch(obj: str) -> bytes | None:
+        url = cloud.map_url(server, did, obj, "get_interim_file_url_pro", raw_obj=True)
+        return cloud.download(url) if url else None
+
+    raw_map = fetch(map_obj)
+    if not raw_map:
+        raise ValueError("Xiaomi cloud has no map file for this robot (open the map once in "
+                         "Mi Home while the robot is online, then try again)")
+    raw_infos = fetch(infos_obj) if infos_obj else None
+    build_view(raw_map, raw_infos)             # validates; raises ValueError
+    return raw_map.decode("utf-8"), raw_infos.decode("utf-8") if raw_infos else None
+
+
 class SavedMapCoordinator(DataUpdateCoordinator[MapResult]):
     """Serves the imported map copy. Never polls, never opens a socket."""
 
@@ -130,9 +167,25 @@ class SavedMapCoordinator(DataUpdateCoordinator[MapResult]):
     def imported_at(self) -> str | None:
         return self._stored.get("imported_at")
 
+    def _issue_id(self) -> str:
+        return ISSUE_MAP_MISSING.format(entry_id=self.entry.entry_id)
+
     async def async_load(self) -> None:
         """Load the stored copy (if any) and render it once."""
         self._stored = await self._store.async_load() or {}
+        pending = self.entry.data.get(PENDING_MAP_KEY)
+        if isinstance(pending, dict) and pending.get("map_raw"):
+            # Map downloaded by the config flow: move it into the Store and
+            # drop it from the entry data (it does not belong there long-term).
+            try:
+                await self.async_import(pending["map_raw"], pending.get("map_infos_raw"),
+                                        "config flow (one-time cloud download)")
+            except ValueError as err:
+                _LOGGER.error("Map handed over by the setup flow is unreadable: %s", err)
+            data = {k: v for k, v in self.entry.data.items() if k != PENDING_MAP_KEY}
+            self.hass.config_entries.async_update_entry(self.entry, data=data)
+            if self._view is not None:
+                return
         if self._stored.get("map_raw"):
             try:
                 self._view = await self.hass.async_add_executor_job(self._build)
@@ -144,8 +197,13 @@ class SavedMapCoordinator(DataUpdateCoordinator[MapResult]):
             # refresh (it would log UpdateFailed at ERROR). Entities simply
             # stay unavailable until jonr_local.import_map runs.
             _LOGGER.warning(
-                "No saved map imported yet — run tools/dump_map.py, then the "
-                "jonr_local.import_map service (tools/push_map.py)")
+                "No saved map yet — use Configure → 'Download the map from your "
+                "Xiaomi account' on the JONR Local integration")
+            ir.async_create_issue(
+                self.hass, DOMAIN, self._issue_id(), is_fixable=False,
+                severity=ir.IssueSeverity.WARNING, translation_key="saved_map_missing",
+                learn_more_url="https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md",
+            )
             self.last_update_success = False
             return
         await self.async_refresh()
@@ -181,6 +239,7 @@ class SavedMapCoordinator(DataUpdateCoordinator[MapResult]):
             self._stored = previous
             raise
         await self._store.async_save(candidate)
+        ir.async_delete_issue(self.hass, DOMAIN, self._issue_id())
         old_rooms = set(self._view.room_names) if self._view else set()
         self._view = view
         self.async_set_updated_data(view.result)

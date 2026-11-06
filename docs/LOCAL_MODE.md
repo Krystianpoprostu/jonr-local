@@ -26,7 +26,7 @@ firmware `4.5.6_0805`.
 | Last-clean log (sensor + `jonr_local_clean_finished` event) | ✅ LAN telemetry (new in this fork) |
 | Rename / re-type a room (`set_room_info`) | ❌ blocked. Over the LAN 17.15 answers `-9999` and knocks the robot out of its task. Rename in Mi Home, then refresh the saved map |
 | Live robot position and trace on the map | ❌ only in the cloud map file |
-| Getting a new map after changes in the home | ☁️ one-shot download (see below), then local again |
+| Getting a new map after changes in the home | ☁️ one-time sign-in from *Configure* (or the PC tools), then local again |
 | MQTT instant updates | ❌ not used. The 10 s LAN poll is the only source |
 | Cleaning history from the robot (17.46) | ❌ never answers over the LAN. Use the last-clean log instead |
 | Map switching | ❌ not offered (only one saved map) |
@@ -37,13 +37,21 @@ with network sockets disabled and fail if any cloud class is even constructed.
 
 ## Setup
 
-1. Get the device token and IP: `tools/get_token.py` (QR login with the Mi Home
-   app; the token goes to `.env`, mode 600, and is never printed).
-2. **Settings → Devices & services → Add integration → JONR Vacuum → "Device IP
-   & token + saved map"**. Enter the IP, the token and a name (default `Jonr P20
-   Pro`; the name becomes the device name, and the entity ids are built from it).
-3. Download and import the map (next section). Until then the map camera stays
-   unavailable and room services refuse to run.
+**In the Home Assistant UI (recommended).** *Add integration → JONR Local →
+"Xiaomi account once → fully local"*. Sign in (captcha / e-mail code when
+Xiaomi asks), confirm the robot's IP and a name; the token is found and the map
+downloaded once. The password and the Xiaomi session are not stored; the
+entry carries only IP, token, model, MAC and the map mode. If the map download
+fails, a Repairs entry explains how to get it later.
+
+**Without signing in from HA (advanced).**
+
+1. `tools/get_token.py` (QR login with the Mi Home app; the token goes to
+   `.env`, mode 600, and is never printed).
+2. *Add integration → JONR Local → "Device IP & token + saved map"*: IP,
+   token and a name.
+3. Download and import the map with the PC tools (next section), or use
+   *Configure → Download / refresh the map from your Xiaomi account*.
 
 > Only one entry per robot: all setup paths use the MAC as unique id. Remove an
 > existing cloud entry first if you are migrating.
@@ -72,9 +80,10 @@ bbox, preferences), `calibration.json`, `attributes.json`, `vector.json`,
 ## Refreshing the map after changes in the home
 
 1. Temporarily allow the robot to reach the internet (router rule).
-2. In Mi Home: re-map, split / merge or rename rooms, and let the robot upload
-   (open the map once in the app).
-3. Run `dump_map.py` and `push_map.py` again, then block the robot again.
+2. In Mi Home: re-map, split / merge or rename rooms, and open the map once so
+   the robot uploads it.
+3. *JONR Local → Configure → Download / refresh the map from your Xiaomi
+   account* (or `dump_map.py` + `push_map.py`), then block the robot again.
 
 If the robot ever reports a room id the saved copy does not know, HA raises a
 **Repairs** issue "Saved map looks outdated".

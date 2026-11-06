@@ -5,7 +5,8 @@
         "title": "JONR 掃除機を追加",
         "description": "ライブマップを取得するにはメールでサインインしてください。",
         "menu_options": {
-          "local_map": "Device IP & token + saved map (fully local, recommended)",
+          "account_local": "Xiaomi account once → fully local (recommended)",
+          "local_map": "Device IP & token + saved map (advanced)",
           "credentials": "メールとパスワード（ライブマップを取得）",
           "local": "デバイスIPとトークン（コントロールのみ、マップなし）"
         }
@@ -79,10 +80,26 @@
       },
       "local_map": {
         "title": "Fully local connection",
-        "description": "IP address and 32-character token. Everything runs over your LAN; the map is a copy you import once with the jonr_local.import_map service (see tools/dump_map.py). No cloud connection at runtime.",
+        "description": "IP address and 32-character token. Everything runs over your LAN. You get the token with the guide's tools (https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md); afterwards load the map with **Configure → Download the map from your Xiaomi account**. Easier: go back and choose **Xiaomi account once → fully local**.",
         "data": {
           "host": "IP address",
           "token": "Token",
+          "name": "Device name"
+        }
+      },
+      "account_local": {
+        "title": "Sign in once to your Xiaomi account",
+        "description": "Use the account your robot is paired to in Mi Home. The integration finds the robot (IP address and token) and downloads its map **once**. Your password and the Xiaomi session are **not stored**: after setup everything runs over your local network, and you can block the robot from the internet on your router.",
+        "data": {
+          "username": "Email, phone number or Mi account ID",
+          "password": "Password"
+        }
+      },
+      "saved_device": {
+        "title": "Confirm your robot",
+        "description": "Found **{robot}**. Check its local IP address (set a fixed address for it on your router if you can) and choose a name — entity ids are created from the name. Next, the map is downloaded once; the robot may stay offline for this.",
+        "data": {
+          "host": "Robot IP address",
           "name": "Device name"
         }
       }
@@ -91,7 +108,8 @@
       "unsupported_model": "このモデルはまだサポートされていません。",
       "cannot_connect": "そのIPとトークンでロボット掃除機に到達できません。",
       "oauth_failed": "Xiaomi OAuthに失敗しました。リンクをやり直すか、コードを手動で貼り付けてください。",
-      "oauth_region_failed": "そのコードからXiaomi OAuthのリージョンを特定できませんでした。"
+      "oauth_region_failed": "そのコードからXiaomi OAuthのリージョンを特定できませんでした。",
+      "cannot_connect_saved": "The robot does not answer at that IP address. Make sure it is on and in the same network as Home Assistant, and correct the address."
     },
     "abort": {
       "already_configured": "このロボット掃除機はすでにセットアップされています。",
@@ -656,6 +674,41 @@
         },
         "data_description": {
           "error_notifications": "常時発行される jonr_local_error / jonr_local_station_error イベントに加えて、Home Assistantの永続通知を表示します。"
+        },
+        "menu_options": {
+          "map_refresh": "Download / refresh the map from your Xiaomi account",
+          "settings": "Notification settings"
+        }
+      },
+      "settings": {
+        "title": "JONR Vacuum オプション",
+        "data": {
+          "error_notifications": "ロボットまたはドックがエラーを報告したときに通知"
+        },
+        "data_description": {
+          "error_notifications": "常時発行される jonr_local_error / jonr_local_station_error イベントに加えて、Home Assistantの永続通知を表示します。"
+        }
+      },
+      "map_refresh": {
+        "title": "Download the map (one-time sign-in)",
+        "description": "Use this after first setup or after you re-mapped your home or changed rooms in Mi Home. The robot does **not** need internet if it uploaded its map earlier; after changes in Mi Home let it stay online until the app shows the new map. Your password and session are not stored.",
+        "data": {
+          "username": "Email, phone number or Mi account ID",
+          "password": "Password"
+        }
+      },
+      "map_captcha": {
+        "title": "Quick human check",
+        "description": "Xiaomi wants to know you're real. Type the characters below:\n\n![captcha]({captcha_url})",
+        "data": {
+          "code": "Characters from the image"
+        }
+      },
+      "map_twofa": {
+        "title": "Enter the code",
+        "description": "Xiaomi just emailed you a code. Put it in below.",
+        "data": {
+          "code": "Verification code"
         }
       }
     },
@@ -667,7 +720,12 @@
       "miot_oauth_auth": "新しいタブで [Xiaomi OAuth]({authorize_url}) を開いてください。承認後、XiaomiがHome Assistantに戻ると、このステップが自動的に続行されます。"
     },
     "abort": {
-      "oauth_local_only": "この掃除機はローカル専用で追加されたため、OAuthをリンクするXiaomiクラウドセッションがありません。"
+      "oauth_local_only": "この掃除機はローカル専用で追加されたため、OAuthをリンクするXiaomiクラウドセッションがありません。",
+      "map_refreshed": "Map **{map}** saved. Rooms: {rooms}. Room ids are what jonr_local.clean_segment uses.",
+      "map_download_failed": "The map could not be downloaded: {error}",
+      "device_not_on_account": "This robot was not found on that Xiaomi account. Sign in with the account the robot is paired to in Mi Home.",
+      "login_failed": "Sign-in failed: {reason}",
+      "not_loaded": "The integration is not running. Check that the robot is reachable, then try again."
     }
   },
   "issues": {
@@ -695,6 +753,10 @@
     "saved_map_outdated": {
       "title": "Saved map looks outdated",
       "description": "The robot cleaned room ids {rooms} that are not in the saved map. The robot's map has probably changed. Bring the robot online briefly, check the map in Mi Home, then run tools/dump_map.py and import the new copy with jonr_local.import_map."
+    },
+    "saved_map_missing": {
+      "title": "Your robot's map is not downloaded yet",
+      "description": "Room cleaning, room names and the map card need the robot's map. Get it once:\n\n1. **Settings → Devices & services → JONR Local → Configure**.\n2. Choose **Download / refresh the map from your Xiaomi account** and sign in.\n\nYour password is not stored and the robot may stay offline. If it says there is no map yet, map your home in the Mi Home app first (robot online)."
     }
   }
 }

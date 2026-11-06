@@ -264,3 +264,148 @@ def test_explicit_room_id_wins_over_id_plus_two() -> None:
     raw["fields"][3] = json.dumps(areas)
     v = build_view(json.dumps(raw).encode(), None)
     assert v.room_names == {4: "Room A", 3: "Room B"}
+
+
+# --- v0.2.0: guided setup (Xiaomi account once -> fully local) -----------------
+from homeassistant.data_entry_flow import FlowResultType  # noqa: E402
+from homeassistant.helpers import issue_registry as ir  # noqa: E402
+
+from custom_components.jonr_local.saved_map import PENDING_MAP_KEY, download_map_once  # noqa: E402
+
+ROBOT = {"name": "Robot", "did": "123", "model": MODEL, "mac": "aa:bb:cc:dd:ee:02",
+         "localip": "192.0.2.20", "token": "1" * 32, "server": "de"}
+
+
+class FakeCloud:
+    """Stands in for XiaomiCloud: scripted login states, one robot, no network."""
+    states: list = ["ok"]
+    instances: list = []
+
+    def __init__(self, username, password=""):
+        self._states = list(FakeCloud.states)
+        self.login_error = ""
+        self.captcha_image = b""
+        FakeCloud.instances.append(self)
+
+    def begin_login(self):
+        return self._states.pop(0)
+
+    def submit_2fa(self, code):
+        return self._states.pop(0)
+
+    def submit_captcha(self, code):
+        return self._states.pop(0)
+
+    def list_vacuums(self):
+        return [dict(ROBOT)]
+
+
+def _patch_cloud(states):
+    FakeCloud.states, FakeCloud.instances = states, []
+    return patch("custom_components.jonr_local.config_flow.XiaomiCloud", FakeCloud)
+
+
+async def _guided(hass, *, map_ok=True):
+    dl = (patch("custom_components.jonr_local.config_flow.download_map_once",
+                return_value=(synthetic_map(), INFOS)) if map_ok else
+          patch("custom_components.jonr_local.config_flow.download_map_once",
+                side_effect=ValueError("no map")))
+    with _patch_cloud(["ok"]), dl, \
+         patch("custom_components.jonr_local.config_flow._probe",
+               return_value={"model": MODEL, "mac": ROBOT["mac"]}), \
+         patch("custom_components.jonr_local.config_flow.XtlVacuumDevice"):
+        r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        assert r["menu_options"][0] == "account_local"
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"next_step_id": "account_local"})
+        assert r["step_id"] == "account_local"
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"username": "u", "password": "p"})
+        assert r["type"] is FlowResultType.FORM and r["step_id"] == "saved_device"
+        assert r["description_placeholders"]["robot"] == "Robot"
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_HOST: "192.0.2.20", "name": "Jonr P20 Pro"})
+    assert r["type"] is FlowResultType.CREATE_ENTRY and r["title"] == "Jonr P20 Pro"
+    await hass.async_block_till_done()          # the new entry sets itself up
+    return r
+
+
+async def test_guided_setup_creates_local_entry_with_map(hass: HomeAssistant, no_cloud, miot) -> None:
+    r = await _guided(hass)
+    data = r["data"]
+    assert data[CONF_MAP_MODE] == MAP_MODE_SAVED and data[CONF_TOKEN] == "1" * 32
+    assert PENDING_MAP_KEY in data
+    # nothing of the Xiaomi session is persisted
+    assert not {"username", "password", "service_token", "ssecurity", "pass_token", "user_id"} & set(data)
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.state is ConfigEntryState.LOADED
+    cam = _ids(hass, "camera")[0]
+    assert set(hass.states.get(cam).attributes["rooms"]) == {"3", "4"}
+    assert PENDING_MAP_KEY not in entry.data            # moved into the Store
+    assert not [i for i in ir.async_get(hass).issues if i[1].startswith("saved_map_missing")]
+
+
+async def test_guided_setup_without_map_raises_repairs_issue(hass: HomeAssistant, no_cloud, miot) -> None:
+    r = await _guided(hass, map_ok=False)
+    assert PENDING_MAP_KEY not in r["data"]
+    assert hass.config_entries.async_entries(DOMAIN)[0].state is ConfigEntryState.LOADED
+    issues = [i for i in ir.async_get(hass).issues if i[0] == DOMAIN and i[1].startswith("saved_map_missing")]
+    assert issues, "user must be told in Repairs how to get the map"
+
+
+async def test_guided_setup_wrong_ip_shows_error(hass: HomeAssistant) -> None:
+    with _patch_cloud(["ok"]), \
+         patch("custom_components.jonr_local.config_flow._probe", side_effect=OSError("timeout")):
+        r = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"next_step_id": "account_local"})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {"username": "u", "password": "p"})
+        r = await hass.config_entries.flow.async_configure(r["flow_id"], {CONF_HOST: "192.0.2.99", "name": "X"})
+    assert r["type"] is FlowResultType.FORM and r["errors"] == {"base": "cannot_connect_saved"}
+
+
+async def test_options_map_refresh_with_2fa(hass: HomeAssistant, no_cloud, miot) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, version=2, unique_id=ROBOT["mac"], data={
+        CONF_HOST: ROBOT["localip"], CONF_TOKEN: ROBOT["token"], CONF_MODEL: MODEL,
+        CONF_MAC: ROBOT["mac"], CONF_MAP_MODE: MAP_MODE_SAVED})
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert [i for i in ir.async_get(hass).issues if i[1].startswith("saved_map_missing")]
+    with _patch_cloud(["2fa", "ok"]), \
+         patch("custom_components.jonr_local.config_flow.download_map_once",
+               return_value=(synthetic_map(), INFOS)) as dl:
+        r = await hass.config_entries.options.async_init(entry.entry_id)
+        assert r["type"] is FlowResultType.MENU and r["menu_options"] == ["map_refresh", "settings"]
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "map_refresh"})
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"username": "u", "password": "p"})
+        assert r["step_id"] == "map_twofa"
+        r = await hass.config_entries.options.async_configure(r["flow_id"], {"code": "123456"})
+    assert r["type"] is FlowResultType.ABORT and r["reason"] == "map_refreshed"
+    assert "Room A (3)" in r["description_placeholders"]["rooms"]
+    assert dl.call_args.args[1:3] == ("de", "123")
+    await hass.async_block_till_done()
+    assert set(hass.states.get(_ids(hass, "camera")[0]).attributes["rooms"]) == {"3", "4"}
+    assert not [i for i in ir.async_get(hass).issues if i[1].startswith("saved_map_missing")]
+
+
+async def test_options_settings_still_reachable(hass: HomeAssistant, no_cloud, miot) -> None:
+    entry = await _setup(hass, miot)
+    r = await hass.config_entries.options.async_init(entry.entry_id)
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "settings"})
+    assert r["step_id"] == "settings"
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"error_notifications": False})
+    assert r["type"] is FlowResultType.CREATE_ENTRY and r["data"]["error_notifications"] is False
+
+
+def test_download_map_once_uses_lan_names_and_validates() -> None:
+    dev = MagicMock()
+    dev.map_obj_name.return_value = "u/d/0"
+    dev.last_map_infos_file = "u/d/1"
+    cloud = MagicMock()
+    cloud.map_url.side_effect = lambda server, did, obj, ep, raw_obj: f"https://x/{obj}"
+    cloud.download.side_effect = lambda url: synthetic_map().encode() if url.endswith("/0") else INFOS.encode()
+    raw_map, raw_infos = download_map_once(cloud, "de", "123", dev)
+    assert json.loads(raw_map)["mapId"] == 3 and "Test floor" in raw_infos
+    cloud.download.side_effect = lambda url: None
+    with pytest.raises(ValueError, match="no map file"):
+        download_map_once(cloud, "de", "123", dev)
+    dev.map_obj_name.return_value = None
+    with pytest.raises(ValueError, match="no map yet"):
+        download_map_once(cloud, "de", "123", dev)

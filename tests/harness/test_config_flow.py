@@ -156,7 +156,7 @@ async def test_user_step_shows_menu(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
-    assert set(result["menu_options"]) == {"local_map", "credentials", "local"}
+    assert set(result["menu_options"]) == {"account_local", "local_map", "credentials", "local"}
 
 
 async def test_local_step_success(hass: HomeAssistant) -> None:

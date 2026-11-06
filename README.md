@@ -38,8 +38,7 @@ a **new** map after you re-map your home (needs the robot online for a moment).
 ## Requirements
 
 - Home Assistant 2024.12 or newer, on the same LAN as the robot.
-- The robot paired in the Mi Home app (once, to get its token and its map).
-- A PC with Python 3.11+ for the two one-time tools (token, map).
+- The robot paired in the Mi Home app (only needed once, for its token and map).
 
 ## Installation
 
@@ -52,29 +51,24 @@ and restart.
 > If you used `jonr-vac` / *JONR Vacuum* before: remove that integration's
 > entries first (both use the robot's MAC as their unique id).
 
-## Setup
+## Setup (everything in the Home Assistant UI)
 
-```bash
-git clone https://github.com/Krystianpoprostu/jonr-local && cd jonr-local
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r tools/requirements.txt
-git clone https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor ../third_party/Xiaomi-cloud-tokens-extractor
-```
+1. *Settings → Devices & services → Add integration → **JONR Local***.
+2. Choose **Xiaomi account once → fully local** and sign in with the account
+   the robot is paired to in Mi Home (captcha and e-mail codes are asked for
+   when Xiaomi wants them).
+3. Confirm the robot's IP address and give it a name (entity ids are built
+   from the name). The map is downloaded once.
+4. Done. The password and the Xiaomi session are **not stored**; the
+   integration now talks only to the robot on your LAN. You can block the
+   robot's internet access on your router.
 
-1. **Token:** `python tools/get_token.py`. Log in with a QR code scanned in
-   Mi Home. The robot's IP and token go to `.env` (mode 600) and are never
-   printed.
-2. **Add the integration:** *Settings → Devices & services → Add integration →
-   JONR Local → "Device IP & token + saved map"*. Enter the IP, the token and
-   a name. The name becomes the device name, and entity ids are derived from it.
-3. **Map:** `python tools/dump_map.py` (one QR login, downloads the map once),
-   then put your HA URL and a long-lived access token into `.env`:
-   ```bash
-   python tools/envfile.py set HA_URL --visible   # e.g. http://192.168.1.20:8123
-   python tools/envfile.py set HA_TOKEN           # hidden input
-   python tools/push_map.py vacuum.<your_robot>
-   ```
-4. **Optional:** block the robot's internet access on your router.
+**Later, after re-mapping your home or changing rooms in Mi Home:** let the
+robot online until Mi Home shows the new map, then *JONR Local → Configure →
+Download / refresh the map from your Xiaomi account*.
+
+If the map is missing (e.g. the download failed during setup), Home Assistant
+shows a **Repairs** entry with these steps.
 
 Add the map card to a dashboard:
 
@@ -86,8 +80,8 @@ water: select.<your_robot>_water_level   # use your entity ids
 fan: select.<your_robot>_fan_speed
 ```
 
-Clean rooms from an automation (room ids are in the map camera's `rooms`
-attribute and in `local_data/map_dumps/latest/rooms.json`):
+Clean rooms from an automation (room ids are shown after the map download and
+in the map camera's `rooms` attribute):
 
 ```yaml
 actions:
@@ -98,8 +92,12 @@ actions:
       segments: [3, 4, 5]
 ```
 
-**After re-mapping your home:** let the robot online, adjust the map in
-Mi Home, run `dump_map.py` + `push_map.py` again, block the robot again.
+### Advanced: without signing in from Home Assistant
+
+Prefer not to enter your Xiaomi password in HA? Use the PC tools instead:
+`tools/get_token.py` (QR login, token to `.env`), add the integration with
+**Device IP & token + saved map**, then `tools/dump_map.py` + `tools/push_map.py`.
+See [docs/LOCAL_MODE.md](docs/LOCAL_MODE.md).
 
 ## Documentation
 

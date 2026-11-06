@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0 — 2026-11-07
+
+Guided setup inside Home Assistant — no terminal needed.
+
+- New first option in *Add integration*: **Xiaomi account once → fully local**.
+  Sign in (password, captcha and e-mail 2FA supported), the robot's IP and
+  token are found automatically, you confirm the IP and a name, and the map
+  is downloaded once. The password and the Xiaomi session are never stored;
+  the entry runs fully local afterwards.
+- **Configure → Download / refresh the map from your Xiaomi account** on a
+  local entry: one-time sign-in that re-downloads the map (after re-mapping or
+  room changes in Mi Home) and shows the rooms it found.
+- A **Repairs** issue tells the user, step by step, how to get the map while a
+  local entry has none; it disappears once the map is imported.
+- Clear errors in the flow (robot not reachable at that IP, robot not on this
+  account, no map uploaded yet).
+- The Python tools stay available for advanced users.
+
 ## 0.1.0 — 2026-11-07
 
 First release of **JONR Local** (`jonr_local`), a separate integration built on

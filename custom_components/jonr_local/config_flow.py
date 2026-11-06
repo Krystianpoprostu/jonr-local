@@ -51,6 +51,7 @@ from .const import (
     OPT_ERROR_NOTIFICATIONS,
 )
 from .device import XtlVacuumDevice
+from .saved_map import PENDING_MAP_KEY, download_map_once
 from .oauth_flow import OAuthCodeLink
 from .spec.registry import is_supported
 
@@ -145,13 +146,68 @@ class JonrVacuumConfigFlow(ConfigFlow, domain=DOMAIN):
         self._oauth_link: OAuthCodeLink | None = None
         self._oauth_task: asyncio.Task[dict[str, Any]] | None = None
         self._oauth_error: str | None = None
+        # Fork: True while running the guided "account once -> fully local" path.
+        self._saved_mode = False
 
     # --- entry: pick login method ---------------------------------------
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         return self.async_show_menu(
-            step_id="user", menu_options=["local_map", "credentials", "local"]
+            step_id="user",
+            menu_options=["account_local", "local_map", "credentials", "local"],
+        )
+
+    # --- fork: guided setup — Xiaomi account once, then fully local -------
+    async def async_step_account_local(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Sign in once to find the robot (IP, token) and download its map;
+        the session is dropped afterwards and the entry runs fully local."""
+        self._saved_mode = True
+        if user_input is None:
+            return self.async_show_form(step_id="account_local", data_schema=CRED_SCHEMA)
+        self._cloud = XiaomiCloud(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
+        state = await self.hass.async_add_executor_job(self._cloud.begin_login)
+        return await self._branch(state)
+
+    async def async_step_saved_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm the robot's LAN address and name, then fetch the map once."""
+        d = self._selected
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            try:
+                info = await self.hass.async_add_executor_job(_probe, host, d["token"])
+            except Exception:  # noqa: BLE001
+                errors["base"] = "cannot_connect_saved"
+            else:
+                await self.async_set_unique_id(info["mac"] or d["mac"] or f'{d["model"]}-{d["did"]}')
+                self._abort_if_unique_id_configured()
+                data = {
+                    CONF_HOST: host, CONF_TOKEN: d["token"], CONF_MODEL: info["model"],
+                    CONF_MAC: info["mac"] or d["mac"], CONF_MAP_MODE: MAP_MODE_SAVED,
+                }
+                try:
+                    device = await self.hass.async_add_executor_job(
+                        XtlVacuumDevice, host, d["token"], info["model"])
+                    raw_map, raw_infos = await self.hass.async_add_executor_job(
+                        download_map_once, self._cloud, d["server"], str(d["did"]), device)
+                    data[PENDING_MAP_KEY] = {"map_raw": raw_map, "map_infos_raw": raw_infos}
+                except Exception as err:  # noqa: BLE001 — entry still works; Repairs explains
+                    _LOGGER.warning("Map download during setup failed: %s", err)
+                self._cloud = None   # the Xiaomi session is never stored
+                title = (user_input.get("name") or "").strip() or d["name"] or info["model"]
+                return self.async_create_entry(title=title, data=data)
+        schema = vol.Schema({
+            vol.Required(CONF_HOST, default=d.get("localip") or ""): cv.string,
+            vol.Optional("name", default=d.get("name") or "Jonr P20 Pro"): cv.string,
+        })
+        return self.async_show_form(
+            step_id="saved_device", data_schema=schema, errors=errors,
+            description_placeholders={"robot": d.get("name") or d["model"]},
         )
 
 
@@ -293,7 +349,7 @@ class JonrVacuumConfigFlow(ConfigFlow, domain=DOMAIN):
         if state == "2fa":
             return await self.async_step_twofa()
         if state == "ok":
-            if self.source == SOURCE_REAUTH:
+            if self.source == SOURCE_REAUTH and not self._saved_mode:
                 return self._finish_reauth()
             return await self.async_step_devices()
         # 登录验证失败 = Xiaomi blocked the sign-in pending account verification,
@@ -339,6 +395,8 @@ class JonrVacuumConfigFlow(ConfigFlow, domain=DOMAIN):
         cloud = self._cloud
         if not is_supported(d["model"]):
             return self.async_abort(reason="unsupported_model")
+        if self._saved_mode:
+            return await self.async_step_saved_device()
 
         wifi_sn = await self.hass.async_add_executor_job(
             self._get_wifi_sn, d["localip"], d["token"], d["model"], cloud.user_id
@@ -489,9 +547,23 @@ class JonrVacuumOptionsFlow(OptionsFlow):
         self._oauth_task: asyncio.Task[dict[str, Any]] | None = None
         self._oauth_error: str | None = None
         self._options: dict[str, Any] = {}
+        self._cloud: XiaomiCloud | None = None
+        self._cap_n = 0
+
+    def _is_saved(self) -> bool:
+        return self.config_entry.data.get(CONF_MAP_MODE) == MAP_MODE_SAVED
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if self._is_saved():
+            # Fork: fully local entries get a menu — settings, or a one-time
+            # map download from the Xiaomi account.
+            return self.async_show_menu(step_id="init", menu_options=["map_refresh", "settings"])
+        return await self.async_step_settings(user_input, step_id="init")
+
+    async def async_step_settings(
+        self, user_input: dict[str, Any] | None = None, step_id: str = "settings"
     ) -> ConfigFlowResult:
         if user_input is None:
             schema = vol.Schema(
@@ -506,7 +578,7 @@ class JonrVacuumOptionsFlow(OptionsFlow):
                     ): cv.boolean
                 }
             )
-            return self.async_show_form(step_id="init", data_schema=schema)
+            return self.async_show_form(step_id=step_id, data_schema=schema)
         self._options = {**self.config_entry.options, **user_input}
         # OAuth needs a cloud session (server/user); local-only entries stop
         # at the saved toggle instead of aborting before it (the form above
@@ -517,6 +589,71 @@ class JonrVacuumOptionsFlow(OptionsFlow):
 
     def _save_options(self) -> ConfigFlowResult:
         return self.async_create_entry(title="", data=self._options)
+
+    # --- fork: one-time map download from the Xiaomi account -------------
+    async def async_step_map_refresh(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is None:
+            return self.async_show_form(step_id="map_refresh", data_schema=CRED_SCHEMA)
+        self._cloud = XiaomiCloud(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
+        state = await self.hass.async_add_executor_job(self._cloud.begin_login)
+        return await self._map_branch(state)
+
+    async def async_step_map_captcha(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            state = await self.hass.async_add_executor_job(self._cloud.submit_captcha, user_input["code"])
+            return await self._map_branch(state)
+        ensure_registered(self.hass)
+        set_image(self.hass, "captcha", self._cloud.captcha_image)
+        self._cap_n += 1
+        return self.async_show_form(
+            step_id="map_captcha", data_schema=CODE_SCHEMA,
+            description_placeholders={"captcha_url": f"{IMG_URL}?n=captcha&t={self._cap_n}"})
+
+    async def async_step_map_twofa(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            state = await self.hass.async_add_executor_job(self._cloud.submit_2fa, user_input["code"])
+            return await self._map_branch(state)
+        return self.async_show_form(step_id="map_twofa", data_schema=CODE_SCHEMA)
+
+    async def _map_branch(self, state: str) -> ConfigFlowResult:
+        if state == "captcha":
+            return await self.async_step_map_captcha()
+        if state == "2fa":
+            return await self.async_step_map_twofa()
+        if state != "ok":
+            reason = getattr(self._cloud, "login_error", "") or "unknown"
+            self._cloud = None
+            return self.async_abort(reason="login_failed", description_placeholders={"reason": str(reason)})
+        return await self._map_download()
+
+    async def _map_download(self) -> ConfigFlowResult:
+        cloud, self._cloud = self._cloud, None      # never stored
+        data = self.config_entry.data
+        runtime = getattr(self.config_entry, "runtime_data", None)
+        coord = getattr(runtime, "map", None)
+        if coord is None or not getattr(coord, "is_saved_map", False):
+            return self.async_abort(reason="not_loaded")
+        vacuums = await self.hass.async_add_executor_job(cloud.list_vacuums)
+        mac = str(data.get(CONF_MAC) or "").lower()
+        dev = next((v for v in vacuums if v.get("token") == data.get(CONF_TOKEN)
+                    or (mac and str(v.get("mac", "")).lower() == mac)), None)
+        if dev is None:
+            return self.async_abort(reason="device_not_on_account")
+        try:
+            raw_map, raw_infos = await self.hass.async_add_executor_job(
+                download_map_once, cloud, dev["server"], str(dev["did"]), coord.device)
+            summary = await coord.async_import(raw_map, raw_infos, "options flow (one-time cloud download)")
+        except ValueError as err:
+            return self.async_abort(reason="map_download_failed", description_placeholders={"error": str(err)})
+        rooms = ", ".join(f"{name} ({rid})" for rid, name in summary["rooms"].items())
+        return self.async_abort(reason="map_refreshed", description_placeholders={
+            "map": summary.get("map_name") or str(summary.get("map_id")), "rooms": rooms})
 
     async def async_step_miot_oauth_auth(
         self, user_input: dict[str, Any] | None = None

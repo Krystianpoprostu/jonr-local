@@ -5,7 +5,8 @@
         "title": "Dodaj odkurzacz JONR",
         "description": "Zaloguj się za pomocą poczty e-mail, aby uzyskać mapę na żywo.",
         "menu_options": {
-          "local_map": "IP urządzenia i token + zapisana mapa (w pełni lokalnie, zalecane)",
+          "account_local": "Konto Xiaomi jednorazowo → w pełni lokalnie (zalecane)",
+          "local_map": "IP urządzenia i token + zapisana mapa (zaawansowane)",
           "credentials": "E-mail i hasło (uzyskaj mapę na żywo)",
           "local": "IP urządzenia i token (tylko kontrola, bez mapy)"
         }
@@ -79,10 +80,26 @@
       },
       "local_map": {
         "title": "Połączenie w pełni lokalne",
-        "description": "Adres IP i 32-znakowy token. Wszystko działa w sieci lokalnej; mapa to kopia importowana jednorazowo usługą jonr_local.import_map (patrz tools/dump_map.py). Bez połączeń z chmurą w czasie pracy.",
+        "description": "Adres IP i 32-znakowy token. Wszystko działa w sieci lokalnej. Token pobierzesz narzędziami z instrukcji (https://github.com/Krystianpoprostu/jonr-local/blob/main/docs/LOCAL_MODE.md); mapę wczytasz potem przez **Konfiguruj → Pobierz mapę z konta Xiaomi**. Prościej: wróć i wybierz **Konto Xiaomi jednorazowo → w pełni lokalnie**.",
         "data": {
           "host": "Adres IP",
           "token": "Token",
+          "name": "Nazwa urządzenia"
+        }
+      },
+      "account_local": {
+        "title": "Zaloguj się jednorazowo do konta Xiaomi",
+        "description": "Użyj konta, do którego robot jest dodany w Mi Home. Integracja znajdzie robota (adres IP i token) i **jednorazowo** pobierze jego mapę. Hasło i sesja Xiaomi **nie są zapisywane**: po konfiguracji wszystko działa w sieci lokalnej, a robotowi możesz zablokować internet na routerze.",
+        "data": {
+          "username": "E-mail, numer telefonu lub ID konta Mi",
+          "password": "Hasło"
+        }
+      },
+      "saved_device": {
+        "title": "Potwierdź robota",
+        "description": "Znaleziono **{robot}**. Sprawdź jego lokalny adres IP (najlepiej ustaw mu stały adres na routerze) i wybierz nazwę — z niej powstaną identyfikatory encji. Następnie mapa zostanie pobrana jednorazowo; robot może przy tym być offline.",
+        "data": {
+          "host": "Adres IP robota",
           "name": "Nazwa urządzenia"
         }
       }
@@ -91,7 +108,8 @@
       "unsupported_model": "Ten model nie jest jeszcze obsługiwany.",
       "cannot_connect": "Nie można połączyć się z odkurzaczem przy tym adresie IP i tokenie.",
       "oauth_failed": "Xiaomi OAuth nie powiodło się. Spróbuj ponownie lub wklej kod ręcznie.",
-      "oauth_region_failed": "Nie udało się ustalić regionu OAuth Xiaomi z tego kodu."
+      "oauth_region_failed": "Nie udało się ustalić regionu OAuth Xiaomi z tego kodu.",
+      "cannot_connect_saved": "Robot nie odpowiada pod tym adresem IP. Upewnij się, że jest włączony i w tej samej sieci co Home Assistant, i popraw adres."
     },
     "abort": {
       "already_configured": "Ten odkurzacz jest już skonfigurowany.",
@@ -656,6 +674,41 @@
         },
         "data_description": {
           "error_notifications": "Trwałe powiadomienia Home Assistant, dodatkowo do zawsze wysyłanych zdarzeń magistrali jonr_local_error / jonr_local_station_error."
+        },
+        "menu_options": {
+          "map_refresh": "Pobierz / odśwież mapę z konta Xiaomi",
+          "settings": "Ustawienia powiadomień"
+        }
+      },
+      "settings": {
+        "title": "Opcje Odkurzacza JONR",
+        "data": {
+          "error_notifications": "Powiadamiaj, gdy robot lub stacja zgłoszą błąd"
+        },
+        "data_description": {
+          "error_notifications": "Trwałe powiadomienia Home Assistant, dodatkowo do zawsze wysyłanych zdarzeń magistrali jonr_local_error / jonr_local_station_error."
+        }
+      },
+      "map_refresh": {
+        "title": "Pobierz mapę (jednorazowe logowanie)",
+        "description": "Użyj po pierwszej konfiguracji albo po ponownym zmapowaniu domu lub zmianie pokoi w Mi Home. Robot **nie** potrzebuje internetu, jeśli wcześniej wysłał mapę; po zmianach w Mi Home zostaw go online, aż aplikacja pokaże nową mapę. Hasło i sesja nie są zapisywane.",
+        "data": {
+          "username": "E-mail, numer telefonu lub ID konta Mi",
+          "password": "Hasło"
+        }
+      },
+      "map_captcha": {
+        "title": "Szybka weryfikacja",
+        "description": "Xiaomi chce sprawdzić, że jesteś człowiekiem. Przepisz znaki z obrazka:\n\n![captcha]({captcha_url})",
+        "data": {
+          "code": "Znaki z obrazka"
+        }
+      },
+      "map_twofa": {
+        "title": "Wpisz kod",
+        "description": "Xiaomi wysłał Ci kod e-mailem. Wpisz go poniżej.",
+        "data": {
+          "code": "Kod weryfikacyjny"
         }
       }
     },
@@ -667,7 +720,12 @@
       "miot_oauth_auth": "Otwórz [Xiaomi OAuth]({authorize_url}) w nowej karcie. Po zatwierdzeniu Xiaomi powinien wrócić do Home Assistant i ten krok zostanie kontynuowany automatycznie."
     },
     "abort": {
-      "oauth_local_only": "Ten odkurzacz został dodany jako tylko-lokalny, więc nie ma sesji w chmurze Xiaomi, do której można by połączyć OAuth."
+      "oauth_local_only": "Ten odkurzacz został dodany jako tylko-lokalny, więc nie ma sesji w chmurze Xiaomi, do której można by połączyć OAuth.",
+      "map_refreshed": "Mapa **{map}** zapisana. Pokoje: {rooms}. Te numery pokoi przyjmuje usługa jonr_local.clean_segment.",
+      "map_download_failed": "Nie udało się pobrać mapy: {error}",
+      "device_not_on_account": "Nie znaleziono tego robota na tym koncie Xiaomi. Zaloguj się kontem, do którego robot jest dodany w Mi Home.",
+      "login_failed": "Logowanie nieudane: {reason}",
+      "not_loaded": "Integracja nie działa. Sprawdź, czy robot jest osiągalny, i spróbuj ponownie."
     }
   },
   "issues": {
@@ -695,6 +753,10 @@
     "saved_map_outdated": {
       "title": "Zapisana mapa wygląda na nieaktualną",
       "description": "Robot sprzątał pokoje o ID {rooms}, których nie ma w zapisanej mapie. Mapa w robocie prawdopodobnie się zmieniła. Na chwilę włącz robotowi internet, sprawdź mapę w Mi Home, uruchom tools/dump_map.py i zaimportuj nową kopię usługą jonr_local.import_map."
+    },
+    "saved_map_missing": {
+      "title": "Mapa robota nie jest jeszcze pobrana",
+      "description": "Sprzątanie pokoi, nazwy pokoi i karta mapy potrzebują mapy robota. Pobierz ją jednorazowo:\n\n1. **Ustawienia → Urządzenia i usługi → JONR Local → Konfiguruj**.\n2. Wybierz **Pobierz / odśwież mapę z konta Xiaomi** i zaloguj się.\n\nHasło nie jest zapisywane, a robot może być offline. Jeśli pojawi się informacja, że mapy jeszcze nie ma, najpierw zmapuj dom w aplikacji Mi Home (robot online)."
     }
   }
 }
