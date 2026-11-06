@@ -18,20 +18,20 @@ def _xtl_profile(monkeypatch):
     from pathlib import Path
     from types import ModuleType
 
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
-    pkg = ModuleType("jonr_vac")
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    sys.modules.setdefault("jonr_vac", pkg)
+    sys.modules.setdefault("jonr_local", pkg)
 
-    spec_pkg = ModuleType("jonr_vac.spec")
+    spec_pkg = ModuleType("jonr_local.spec")
     spec_pkg.__path__ = [str(pkg_root / "spec")]
-    sys.modules.setdefault("jonr_vac.spec", spec_pkg)
+    sys.modules.setdefault("jonr_local.spec", spec_pkg)
 
     for name in list(sys.modules):
-        if name.startswith("jonr_vac.spec.") and "profiles" in name:
+        if name.startswith("jonr_local.spec.") and "profiles" in name:
             monkeypatch.delitem(sys.modules, name, raising=False)
 
-    profiles_mod = importlib.import_module("jonr_vac.spec.profiles.xtl")
+    profiles_mod = importlib.import_module("jonr_local.spec.profiles.xtl")
     return profiles_mod.XTL_XM2216
 
 

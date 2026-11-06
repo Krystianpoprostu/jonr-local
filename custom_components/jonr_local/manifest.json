@@ -1,0 +1,22 @@
+{
+  "domain": "jonr_local",
+  "name": "JONR Local",
+  "codeowners": [
+    "@Krystianpoprostu"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "lovelace"
+  ],
+  "documentation": "https://github.com/Krystianpoprostu/jonr-local",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Krystianpoprostu/jonr-local/issues",
+  "requirements": [
+    "python-miio>=0.5.12",
+    "pycryptodome==3.23.0",
+    "paho-mqtt>=2.1.0"
+  ],
+  "version": "0.1.0"
+}

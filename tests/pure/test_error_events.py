@@ -7,6 +7,8 @@ contract runs on native Windows.
 """
 from __future__ import annotations
 
+import pytest
+
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,7 +20,7 @@ from .helpers import (
     load_xtl_module,
 )
 
-PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
 ENTRY_ID = "entry-1"
 
 
@@ -69,7 +71,7 @@ def test_error_transition_fires_event_and_notification_once(monkeypatch):
     notifier.async_process({"robot": 4012, "station": None})  # echo, no spam
 
     assert notifier._hass.bus.fired == [
-        ("jonr_vac_error",
+        ("jonr_local_error",
          {"entity_id": None, "error": "robot_stuck", "code": 4012}),
     ]
     assert len(FakePersistentNotification.created) == 1
@@ -81,14 +83,14 @@ def test_error_transition_fires_event_and_notification_once(monkeypatch):
     assert "Retirez les obstacles autour du robot" in created["message"]
     # The official fault picture (extracted from the Mi Home plugin), as a
     # same-origin markdown URL on the integration's own static path.
-    assert ("![Robot bloqué](/jonr-vac-card/images/faults/RobotTrapped.png)"
+    assert ("![Robot bloqué](/jonr-local-card/images/faults/RobotTrapped.png)"
             in created["message"])
-    assert created["notification_id"] == f"jonr_vac_{ENTRY_ID}_robot_4012"
+    assert created["notification_id"] == f"jonr_local_{ENTRY_ID}_robot_4012"
 
     # clearing the error dismisses the bubble once
     notifier.async_process({"robot": 0, "station": None})
     assert FakePersistentNotification.dismissed == [
-        f"jonr_vac_{ENTRY_ID}_robot_4012"
+        f"jonr_local_{ENTRY_ID}_robot_4012"
     ]
     notifier.async_process({"robot": 0, "station": None})
     assert len(FakePersistentNotification.dismissed) == 1
@@ -100,7 +102,7 @@ def test_station_error_uses_its_own_event_and_title(monkeypatch):
     notifier.async_process({"robot": None, "station": 4503})
 
     event_type, payload = notifier._hass.bus.fired[0]
-    assert event_type == "jonr_vac_station_error"
+    assert event_type == "jonr_local_station_error"
     assert payload == {"entity_id": None, "error": "dirty_water_full",
                        "code": 4503}
     created = FakePersistentNotification.created[0]
@@ -117,7 +119,7 @@ def test_notifications_off_still_fires_events(monkeypatch):
     notifier.async_process({"robot": 4012, "station": 4501})
 
     assert [t for t, _ in notifier._hass.bus.fired] == [
-        "jonr_vac_error", "jonr_vac_station_error",
+        "jonr_local_error", "jonr_local_station_error",
     ]
     assert FakePersistentNotification.created == []
 
@@ -133,7 +135,7 @@ def test_startup_with_a_live_error_notifies(monkeypatch):
 
     notifier.listen()
 
-    assert notifier._hass.bus.fired[0][0] == "jonr_vac_error"
+    assert notifier._hass.bus.fired[0][0] == "jonr_local_error"
     assert FakePersistentNotification.created[0]["notification_id"].endswith(
         "_robot_4001"
     )

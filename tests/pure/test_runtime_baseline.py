@@ -66,22 +66,22 @@ class _FakeMiotDevice:
 
 
 def _load_device_module(monkeypatch: pytest.MonkeyPatch):
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
 
     miio = ModuleType("miio")
     miio.MiotDevice = _FakeMiotDevice
     monkeypatch.setitem(sys.modules, "miio", miio)
 
-    pkg = ModuleType("jonr_vac")
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    monkeypatch.setitem(sys.modules, "jonr_vac", pkg)
+    monkeypatch.setitem(sys.modules, "jonr_local", pkg)
 
     for name in list(sys.modules):
-        if name == "jonr_vac.device" or name.startswith("jonr_vac.spec"):
+        if name == "jonr_local.device" or name.startswith("jonr_local.spec"):
             monkeypatch.delitem(sys.modules, name, raising=False)
 
     _FakeMiotDevice.instances.clear()
-    return importlib.import_module("jonr_vac.device")
+    return importlib.import_module("jonr_local.device")
 
 
 def test_device_locate_uses_core_action(monkeypatch):

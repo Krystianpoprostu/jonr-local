@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 from homeassistant.core import HomeAssistant
 
-from custom_components.jonr_vac.cloud.mqtt import (
+from custom_components.jonr_local.cloud.mqtt import (
     MiotMqttClient,
     _parse_message,
 )

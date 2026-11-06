@@ -9,7 +9,7 @@ venv/
 *.pyc
 __pycache__/
 
-custom_components/jonr_vac/spec/profiles/_drafts/
+custom_components/jonr_local/spec/profiles/_drafts/
 
 requirements-dev-wsl.txt
 requirements-dev-win.txt
@@ -21,3 +21,14 @@ CLAUDE.md
 GEMINI.md
 
 .mi_session.json
+
+# --- local fork: secrets & device data (never commit) ---
+.env
+.env.*
+secrets.yaml
+*.token
+local_data/
+map_dumps/
+
+# personal admin tool for the author's own HA (hard-coded host/key)
+tools/ha_admin.py

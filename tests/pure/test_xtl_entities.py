@@ -21,13 +21,13 @@ import pytest
 
 from .helpers import FakeMiotDevice, load_device_module
 
-PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
 
 
 def _load(monkeypatch):
     device_mod = load_device_module(monkeypatch)
     device = device_mod.XtlVacuumDevice("host", "token", "xtl.vacuum.xm2216")
-    xtl = importlib.import_module("jonr_vac.spec.profiles.xtl")
+    xtl = importlib.import_module("jonr_local.spec.profiles.xtl")
     return device_mod, device, xtl
 
 
@@ -1247,7 +1247,7 @@ MAP_INFOS_JSON = json.dumps([
 
 def test_map_capability_wires_get_infos_and_switch(monkeypatch):
     _, device, _ = _load(monkeypatch)
-    spec_types = importlib.import_module("jonr_vac.spec.types")
+    spec_types = importlib.import_module("jonr_local.spec.types")
     cap = device.profile.map
 
     assert isinstance(cap, spec_types.XtlMapCapability)
@@ -1358,7 +1358,7 @@ def test_xtl_setting_methods_need_an_xtl_core(monkeypatch, method, args):
 
 def test_switch_table_matches_core_props_and_device_api(monkeypatch):
     _, device, _ = _load(monkeypatch)
-    device_mod = importlib.import_module("jonr_vac.device")
+    device_mod = importlib.import_module("jonr_local.device")
 
     for key, _icon, status_attr, setter, prop_attr, *needs in _table(
             "switch.py", "XTL_SWITCHES"):
@@ -1390,7 +1390,7 @@ def test_switch_table_no_phantom_features_and_boost_gate():
 
 def test_select_table_matches_core_tables_and_status(monkeypatch):
     _, device, _ = _load(monkeypatch)
-    device_mod = importlib.import_module("jonr_vac.device")
+    device_mod = importlib.import_module("jonr_local.device")
 
     for key, spec_attr, status_attr, setter in _table("select.py", "XTL_SELECTS"):
         table = getattr(device.core, spec_attr, None)

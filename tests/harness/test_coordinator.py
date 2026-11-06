@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from custom_components.jonr_vac.const import (
+from custom_components.jonr_local.const import (
     CONF_DEVICE_ID,
     CONF_MAC,
     CONF_MODEL,
@@ -23,11 +23,11 @@ from custom_components.jonr_vac.const import (
     CONF_USERNAME,
     CONF_WIFI_SN,
 )
-from custom_components.jonr_vac.coordinator import JonrVacuumCoordinator
-from custom_components.jonr_vac.device import DeviceCommunicationError
-from custom_components.jonr_vac.map import MapResult, SessionExpired
-from custom_components.jonr_vac.cloud.mqtt import MqttMessage
-from custom_components.jonr_vac.map_coordinator import JonrMapCoordinator
+from custom_components.jonr_local.coordinator import JonrVacuumCoordinator
+from custom_components.jonr_local.device import DeviceCommunicationError
+from custom_components.jonr_local.map import MapResult, SessionExpired
+from custom_components.jonr_local.cloud.mqtt import MqttMessage
+from custom_components.jonr_local.map_coordinator import JonrMapCoordinator
 
 
 def _fake_result(map_id: int = 1, content_hash: str = "hash-a") -> MapResult:
@@ -188,7 +188,7 @@ async def test_map_coordinator_build_non_ijai_does_not_require_wifi_sn(
     fake_fetcher.fetch.side_effect = [_fake_result(map_id=1), None]
 
     with (
-        patch("custom_components.jonr_vac.map_coordinator.XiaomiCloud"),
+        patch("custom_components.jonr_local.map_coordinator.XiaomiCloud"),
         patch.object(coord, "_build", return_value=fake_fetcher),
         patch.object(coord, "_ensure_cache", new=AsyncMock(return_value=_FakeCache())),
         patch.object(hass, "async_add_executor_job", new=AsyncMock(side_effect=lambda fn, *a: fn(*a))),
@@ -216,7 +216,7 @@ async def test_map_coordinator_build_ijai_raises_without_wifi_sn(
     coord = JonrMapCoordinator(hass, entry, device, control)
 
     with (
-        patch("custom_components.jonr_vac.map_coordinator.XiaomiCloud"),
+        patch("custom_components.jonr_local.map_coordinator.XiaomiCloud"),
         pytest.raises(UpdateFailed, match="wifi_sn"),
     ):
         coord._build()
@@ -236,8 +236,8 @@ async def test_map_coordinator_persists_live_wifi_sn_and_mac(
     coord = JonrMapCoordinator(hass, entry, device, control)
 
     with (
-        patch("custom_components.jonr_vac.map_coordinator.XiaomiCloud"),
-        patch("custom_components.jonr_vac.map_coordinator.MapFetcher"),
+        patch("custom_components.jonr_local.map_coordinator.XiaomiCloud"),
+        patch("custom_components.jonr_local.map_coordinator.MapFetcher"),
         patch.object(hass.config_entries, "async_update_entry") as update,
     ):
         coord._build()
@@ -264,8 +264,8 @@ async def test_map_coordinator_never_overwrites_stored_keys_with_blank_live_read
     coord = JonrMapCoordinator(hass, entry, device, control)
 
     with (
-        patch("custom_components.jonr_vac.map_coordinator.XiaomiCloud"),
-        patch("custom_components.jonr_vac.map_coordinator.MapFetcher") as fetcher,
+        patch("custom_components.jonr_local.map_coordinator.XiaomiCloud"),
+        patch("custom_components.jonr_local.map_coordinator.MapFetcher") as fetcher,
         patch.object(hass.config_entries, "async_update_entry") as update,
     ):
         coord._build()
@@ -753,7 +753,7 @@ async def test_mqtt_upload_event_schedules_debounce_task(hass: HomeAssistant) ->
     msg = MqttMessage(kind="event", topic="x", siid=10, eiid=6)
     assert coord._mqtt_debounce_task is None
 
-    with patch("custom_components.jonr_vac.map_coordinator._DEBOUNCE_SECONDS", 60):
+    with patch("custom_components.jonr_local.map_coordinator._DEBOUNCE_SECONDS", 60):
         await coord.async_on_mqtt_message(msg)
 
     assert coord._mqtt_debounce_task is not None
@@ -772,7 +772,7 @@ async def test_map_upload_request_uses_active_map_and_throttles(
 
     with (
         patch.object(hass, "async_add_executor_job", new=AsyncMock(side_effect=_exec)),
-        patch("custom_components.jonr_vac.map_coordinator.time.monotonic",
+        patch("custom_components.jonr_local.map_coordinator.time.monotonic",
               side_effect=[100.0, 101.0]),
     ):
         first = await coord.async_request_map_upload()
@@ -795,7 +795,7 @@ async def test_mqtt_curmap_event_uploads_selected_map_and_refreshes(
 
     msg = MqttMessage(kind="property", topic="x", siid=10, piid=2, value=7)
     with (
-        patch("custom_components.jonr_vac.map_coordinator._DEBOUNCE_SECONDS", 0),
+        patch("custom_components.jonr_local.map_coordinator._DEBOUNCE_SECONDS", 0),
         patch.object(hass, "async_add_executor_job", new=AsyncMock(side_effect=_exec)),
     ):
         await coord.async_on_mqtt_message(msg)
@@ -812,7 +812,7 @@ async def test_mqtt_curmap_property_updates_active_id(hass: HomeAssistant) -> No
 
     msg = MqttMessage(kind="property", topic="x", siid=10, piid=2, value=7)
 
-    with patch("custom_components.jonr_vac.map_coordinator._DEBOUNCE_SECONDS", 60):
+    with patch("custom_components.jonr_local.map_coordinator._DEBOUNCE_SECONDS", 60):
         await coord.async_on_mqtt_message(msg)
 
     assert coord._mqtt_active_id == 7
@@ -826,7 +826,7 @@ async def test_mqtt_burst_coalesces_to_single_refresh(hass: HomeAssistant) -> No
 
     msg = MqttMessage(kind="event", topic="x", siid=10, eiid=6)
 
-    with patch("custom_components.jonr_vac.map_coordinator._DEBOUNCE_SECONDS", 0):
+    with patch("custom_components.jonr_local.map_coordinator._DEBOUNCE_SECONDS", 0):
         await coord.async_on_mqtt_message(msg)
         await coord.async_on_mqtt_message(msg)
         await coord.async_on_mqtt_message(msg)

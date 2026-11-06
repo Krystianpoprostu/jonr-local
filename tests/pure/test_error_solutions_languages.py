@@ -24,7 +24,7 @@ from .helpers import (
 )
 import pytest
 
-PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+PKG = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
 BUNDLE = (Path(__file__).resolve().parents[3]
           / "jonr_xiaomihome_plugin" / "1730143" / "android" / "main.bundle")
 
@@ -136,7 +136,7 @@ def test_bubble_in_german_carries_vendor_texts_and_en_chrome(monkeypatch):
     assert "Roboter steckt fest" in created["message"]
     assert "4012" in created["message"]
     assert "entfernen" in created["message"]
-    assert "/jonr-vac-card/images/faults/RobotTrapped.png" in created["message"]
+    assert "/jonr-local-card/images/faults/RobotTrapped.png" in created["message"]
 
 
 def test_bubble_label_language_follows_hass_language(monkeypatch):

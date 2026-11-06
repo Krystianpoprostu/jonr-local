@@ -15,13 +15,13 @@ def _error_attrs_fn(monkeypatch, key: str):
     import sys
 
     pkg_root = Path(sensor.__file__).resolve().parent
-    pkg = ModuleType("jonr_vac")
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    sys.modules.setdefault("jonr_vac", pkg)
-    spec_pkg = ModuleType("jonr_vac.spec")
+    sys.modules.setdefault("jonr_local", pkg)
+    spec_pkg = ModuleType("jonr_local.spec")
     spec_pkg.__path__ = [str(pkg_root / "spec")]
-    sys.modules.setdefault("jonr_vac.spec", spec_pkg)
-    profiles = importlib.import_module("jonr_vac.spec.profiles.xtl")
+    sys.modules.setdefault("jonr_local.spec", spec_pkg)
+    profiles = importlib.import_module("jonr_local.spec.profiles.xtl")
 
     desc = next(d for d in sensor.build_sensors(profiles.XTL_XM2216)
                 if d.key == key)

@@ -11,8 +11,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.jonr_vac import async_migrate_entry
-from custom_components.jonr_vac.const import (
+from custom_components.jonr_local import async_migrate_entry
+from custom_components.jonr_local.const import (
     CONF_HOST,
     CONF_MODEL,
     CONF_OAUTH_ACCESS_TOKEN,
@@ -36,7 +36,7 @@ TOKEN = "0" * 32
 TRANSLATIONS_EN = (
     Path(__file__).resolve().parents[2]
     / "custom_components"
-    / "jonr_vac"
+    / "jonr_local"
     / "translations"
     / "en.json"
 )
@@ -44,7 +44,7 @@ TRANSLATIONS_EN = (
 @pytest.fixture(autouse=True)
 def mock_setup_entry():
     """Keep config-flow tests from exercising live device setup."""
-    with patch("custom_components.jonr_vac.async_setup_entry", return_value=True):
+    with patch("custom_components.jonr_local.async_setup_entry", return_value=True):
         yield
 
 
@@ -70,7 +70,7 @@ async def test_options_local_entry_shows_and_saves_toggle(
 ) -> None:
     """A local-only entry (no cloud session) reaches the toggle — not an
     abort — and the choice lands in entry.options."""
-    from custom_components.jonr_vac.const import OPT_ERROR_NOTIFICATIONS
+    from custom_components.jonr_local.const import OPT_ERROR_NOTIFICATIONS
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -96,7 +96,7 @@ async def test_options_cloud_entry_toggle_survives_oauth_abort_path(
     """The toggle form comes BEFORE the OAuth path: a cloud entry that
     finishes the form still gets its option saved (OAuth step patched to
     complete instantly, no reload side effects)."""
-    from custom_components.jonr_vac.const import OPT_ERROR_NOTIFICATIONS
+    from custom_components.jonr_local.const import OPT_ERROR_NOTIFICATIONS
 
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -130,9 +130,9 @@ async def test_options_cloud_entry_toggle_survives_oauth_abort_path(
         return updates
 
     with patch(
-        "custom_components.jonr_vac.config_flow.OAuthCodeLink"
+        "custom_components.jonr_local.config_flow.OAuthCodeLink"
     ) as link_cls, patch(
-        "custom_components.jonr_vac.config_flow._async_exchange_linked_oauth",
+        "custom_components.jonr_local.config_flow._async_exchange_linked_oauth",
         new=_instant,
     ):
         link_cls.return_value.authorize_url = "http://example.invalid"
@@ -156,7 +156,7 @@ async def test_user_step_shows_menu(hass: HomeAssistant) -> None:
         DOMAIN, context={"source": SOURCE_USER}
     )
     assert result["type"] is FlowResultType.MENU
-    assert set(result["menu_options"]) == {"credentials", "local"}
+    assert set(result["menu_options"]) == {"local_map", "credentials", "local"}
 
 
 async def test_local_step_success(hass: HomeAssistant) -> None:
@@ -166,7 +166,7 @@ async def test_local_step_success(hass: HomeAssistant) -> None:
     assert form["step_id"] == "local"
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         return_value={"model": "ijai.vacuum.v3", "mac": "AA:BB:CC:DD:EE:FF"},
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -184,7 +184,7 @@ async def test_local_step_dreame_supported(hass: HomeAssistant) -> None:
     form = await _open_local_form(hass)
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         return_value={"model": "dreame.vacuum.p2008", "mac": "AA:BB:CC:DD:EE:01"},
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -200,7 +200,7 @@ async def test_local_step_rich_reference_unsupported(hass: HomeAssistant) -> Non
     form = await _open_local_form(hass)
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         return_value={"model": "roidmi.vacuum.r1b", "mac": ""},
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -216,7 +216,7 @@ async def test_local_step_cannot_connect(hass: HomeAssistant) -> None:
     form = await _open_local_form(hass)
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         side_effect=Exception("boom"),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -232,7 +232,7 @@ async def test_local_step_unsupported_model(hass: HomeAssistant) -> None:
     form = await _open_local_form(hass)
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         return_value={"model": "roborock.vacuum.a01", "mac": ""},
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -262,15 +262,15 @@ def _cloud_patches(login_state: str = "ok", devices: list | None = None):
         devices = []
     return [
         patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
             return_value=login_state,
         ),
         patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.list_vacuums",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.list_vacuums",
             return_value=devices,
         ),
         patch(
-            "custom_components.jonr_vac.config_flow.XtlVacuumDevice.get_wifi_sn",
+            "custom_components.jonr_local.config_flow.XtlVacuumDevice.get_wifi_sn",
             return_value=None,
         ),
     ]
@@ -360,7 +360,7 @@ async def test_cloud_oauth_success_stores_miot_tokens(hass: HomeAssistant) -> No
         return updates
 
     with patch(
-        "custom_components.jonr_vac.config_flow._async_exchange_linked_oauth",
+        "custom_components.jonr_local.config_flow._async_exchange_linked_oauth",
         side_effect=_slow_exchange,
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -424,7 +424,7 @@ async def test_reauth_mints_tokens_and_discards_password(hass: HomeAssistant) ->
         return "ok"
 
     with patch(
-        "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+        "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
         autospec=True,
         side_effect=_set_session,
     ):
@@ -532,14 +532,14 @@ async def test_cloud_captcha_step_shown_when_required(hass: HomeAssistant) -> No
 
     with (
         patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
             return_value="captcha",
         ),
         patch(
-            "custom_components.jonr_vac.captcha_view.ensure_registered",
+            "custom_components.jonr_local.captcha_view.ensure_registered",
         ),
         patch(
-            "custom_components.jonr_vac.captcha_view.set_image",
+            "custom_components.jonr_local.captcha_view.set_image",
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -562,11 +562,11 @@ async def test_cloud_captcha_submit_continues_to_entry(hass: HomeAssistant) -> N
 
     with (
         patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
             return_value="captcha",
         ),
-        patch("custom_components.jonr_vac.captcha_view.ensure_registered"),
-        patch("custom_components.jonr_vac.captcha_view.set_image"),
+        patch("custom_components.jonr_local.captcha_view.ensure_registered"),
+        patch("custom_components.jonr_local.captcha_view.set_image"),
     ):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
@@ -576,7 +576,7 @@ async def test_cloud_captcha_submit_continues_to_entry(hass: HomeAssistant) -> N
 
     with ExitStack() as stack:
         stack.enter_context(patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.submit_captcha",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.submit_captcha",
             return_value="ok",
         ))
         for p in _cloud_patches(login_state="ok", devices=[_make_device("dreame.vacuum.p2008")]):
@@ -603,7 +603,7 @@ async def test_cloud_twofa_step_shown_when_required(hass: HomeAssistant) -> None
     )
 
     with patch(
-        "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+        "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
         return_value="2fa",
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -625,7 +625,7 @@ async def test_cloud_twofa_submit_continues_to_entry(hass: HomeAssistant) -> Non
     )
 
     with patch(
-        "custom_components.jonr_vac.config_flow.XiaomiCloud.begin_login",
+        "custom_components.jonr_local.config_flow.XiaomiCloud.begin_login",
         return_value="2fa",
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -636,7 +636,7 @@ async def test_cloud_twofa_submit_continues_to_entry(hass: HomeAssistant) -> Non
 
     with ExitStack() as stack:
         stack.enter_context(patch(
-            "custom_components.jonr_vac.config_flow.XiaomiCloud.submit_2fa",
+            "custom_components.jonr_local.config_flow.XiaomiCloud.submit_2fa",
             return_value="ok",
         ))
         for p in _cloud_patches(devices=[_make_device("dreame.vacuum.p2008")]):
@@ -672,7 +672,7 @@ async def test_cloud_device_picker_selection_creates_entry(hass: HomeAssistant) 
     assert result["step_id"] == "devices"
 
     with patch(
-        "custom_components.jonr_vac.config_flow.XtlVacuumDevice.get_wifi_sn",
+        "custom_components.jonr_local.config_flow.XtlVacuumDevice.get_wifi_sn",
         return_value=None,
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -701,7 +701,7 @@ async def test_local_step_duplicate_unique_id_aborts(hass: HomeAssistant) -> Non
     form = await _open_local_form(hass)
 
     with patch(
-        "custom_components.jonr_vac.config_flow._probe",
+        "custom_components.jonr_local.config_flow._probe",
         return_value={"model": "dreame.vacuum.p2008", "mac": "AA:BB:CC:DD:EE:99"},
     ):
         result = await hass.config_entries.flow.async_configure(

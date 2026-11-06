@@ -73,27 +73,27 @@ class FakeMiotDevice:
 
 
 def load_device_module(monkeypatch: pytest.MonkeyPatch):
-    """Load jonr_vac.device with miio replaced by FakeMiotDevice."""
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+    """Load jonr_local.device with miio replaced by FakeMiotDevice."""
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
 
     miio = ModuleType("miio")
     miio.MiotDevice = FakeMiotDevice
     monkeypatch.setitem(sys.modules, "miio", miio)
 
-    pkg = ModuleType("jonr_vac")
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    monkeypatch.setitem(sys.modules, "jonr_vac", pkg)
+    monkeypatch.setitem(sys.modules, "jonr_local", pkg)
 
     for name in list(sys.modules):
-        if name == "jonr_vac.device" or name.startswith("jonr_vac.spec"):
+        if name == "jonr_local.device" or name.startswith("jonr_local.spec"):
             monkeypatch.delitem(sys.modules, name, raising=False)
 
     FakeMiotDevice.reset()
-    return importlib.import_module("jonr_vac.device")
+    return importlib.import_module("jonr_local.device")
 
 
 def load_sensor_module(monkeypatch: pytest.MonkeyPatch):
-    """Load jonr_vac.sensor with HA replaced by thin stubs.
+    """Load jonr_local.sensor with HA replaced by thin stubs.
 
     Only the symbols actually consumed by sensor.py are stubbed — enough to
     import the module and exercise build_sensors() without a real HA install.
@@ -172,15 +172,15 @@ def load_sensor_module(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setitem(sys.modules, mod_name, mod)
 
     # Stub the integration's own modules that sensor.py depends on
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
-    pkg = ModuleType("jonr_vac")
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    monkeypatch.setitem(sys.modules, "jonr_vac", pkg)
+    monkeypatch.setitem(sys.modules, "jonr_local", pkg)
 
     # __init__ stub (just JonrConfigEntry)
-    init_stub = ModuleType("jonr_vac.__init__")
+    init_stub = ModuleType("jonr_local.__init__")
     init_stub.JonrConfigEntry = object
-    monkeypatch.setitem(sys.modules, "jonr_vac.__init__", init_stub)
+    monkeypatch.setitem(sys.modules, "jonr_local.__init__", init_stub)
     # The relative `. import JonrConfigEntry` resolves via the package __init__
     pkg.JonrConfigEntry = object  # type: ignore[attr-defined]
 
@@ -188,46 +188,46 @@ def load_sensor_module(monkeypatch: pytest.MonkeyPatch):
     # label tables); the real const has no HA imports, so mirror every name
     # that chain reads instead of only DOMAIN.
     const_stub = _make(
-        "jonr_vac.const",
-        DOMAIN="jonr_vac",
-        EVENT_ERROR="jonr_vac_error",
-        EVENT_STATION_ERROR="jonr_vac_station_error",
+        "jonr_local.const",
+        DOMAIN="jonr_local",
+        EVENT_ERROR="jonr_local_error",
+        EVENT_STATION_ERROR="jonr_local_station_error",
         OPT_ERROR_NOTIFICATIONS="error_notifications",
-        CARD_STATIC_BASE="/jonr-vac-card",
-        FAULT_IMAGE_URL="/jonr-vac-card/images/faults",
+        CARD_STATIC_BASE="/jonr-local-card",
+        FAULT_IMAGE_URL="/jonr-local-card/images/faults",
     )
-    monkeypatch.setitem(sys.modules, "jonr_vac.const", const_stub)
+    monkeypatch.setitem(sys.modules, "jonr_local.const", const_stub)
 
     coordinator_stub = _make(
-        "jonr_vac.coordinator",
+        "jonr_local.coordinator",
         JonrVacuumCoordinator=object,
     )
-    monkeypatch.setitem(sys.modules, "jonr_vac.coordinator", coordinator_stub)
+    monkeypatch.setitem(sys.modules, "jonr_local.coordinator", coordinator_stub)
 
     # device stub — only VacuumStatus is needed by sensor.py
-    device_stub = _make("jonr_vac.device", VacuumStatus=object)
-    monkeypatch.setitem(sys.modules, "jonr_vac.device", device_stub)
+    device_stub = _make("jonr_local.device", VacuumStatus=object)
+    monkeypatch.setitem(sys.modules, "jonr_local.device", device_stub)
 
     # Ensure spec subpackage stubs are present so relative imports resolve
-    spec_pkg = ModuleType("jonr_vac.spec")
+    spec_pkg = ModuleType("jonr_local.spec")
     spec_pkg.__path__ = [str(pkg_root / "spec")]
-    monkeypatch.setitem(sys.modules, "jonr_vac.spec", spec_pkg)
+    monkeypatch.setitem(sys.modules, "jonr_local.spec", spec_pkg)
 
     # spec.types is imported directly by sensor.py; import the real thing.
     # Profiles must go too — sensor.py's XtlCoreCapability isinstance gates
     # compare against the freshly reloaded spec.types classes, so a cached
-    # jonr_vac.spec.profiles.xtl (built against an older generation of
+    # jonr_local.spec.profiles.xtl (built against an older generation of
     # those classes) would make every gate fail.
     for name in list(sys.modules):
-        if (name == "jonr_vac.spec.types" or name == "jonr_vac.sensor"
-                or name.startswith("jonr_vac.spec.profiles")):
+        if (name == "jonr_local.spec.types" or name == "jonr_local.sensor"
+                or name.startswith("jonr_local.spec.profiles")):
             monkeypatch.delitem(sys.modules, name, raising=False)
 
     # Import real spec.types so ModelProfile etc. are genuine objects
-    spec_types = importlib.import_module("jonr_vac.spec.types")
-    monkeypatch.setitem(sys.modules, "jonr_vac.spec.types", spec_types)
+    spec_types = importlib.import_module("jonr_local.spec.types")
+    monkeypatch.setitem(sys.modules, "jonr_local.spec.types", spec_types)
 
-    return importlib.import_module("jonr_vac.sensor")
+    return importlib.import_module("jonr_local.sensor")
 
 
 class FakePersistentNotification:
@@ -276,32 +276,32 @@ def _make_module(name: str, **attrs) -> ModuleType:
 
 
 def _bootstrap_jonr_pkg(monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Mount jonr_vac + .spec + .spec.profiles as synthetic packages (their
+    """Mount jonr_local + .spec + .spec.profiles as synthetic packages (their
     real __init__ imports HA, which the pure tier must not execute) and drop
     any cached submodule so the next import re-reads the shipped files."""
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
     for name, sub in (
-        ("jonr_vac", ""),
-        ("jonr_vac.spec", "spec"),
-        ("jonr_vac.spec.profiles", "spec/profiles"),
+        ("jonr_local", ""),
+        ("jonr_local.spec", "spec"),
+        ("jonr_local.spec.profiles", "spec/profiles"),
     ):
         pkg = ModuleType(name)
         pkg.__path__ = [str(pkg_root / sub if sub else pkg_root)]
         monkeypatch.setitem(sys.modules, name, pkg)
     for name in list(sys.modules):
-        if name == "jonr_vac.const" or name.startswith("jonr_vac.spec"):
+        if name == "jonr_local.const" or name.startswith("jonr_local.spec"):
             monkeypatch.delitem(sys.modules, name, raising=False)
     return pkg_root
 
 
 def load_xtl_module(monkeypatch: pytest.MonkeyPatch):
-    """Load the real jonr_vac.spec.profiles.xtl (pure, no HA, no miio)."""
+    """Load the real jonr_local.spec.profiles.xtl (pure, no HA, no miio)."""
     _bootstrap_jonr_pkg(monkeypatch)
-    return importlib.import_module("jonr_vac.spec.profiles.xtl")
+    return importlib.import_module("jonr_local.spec.profiles.xtl")
 
 
 def load_error_events_module(monkeypatch: pytest.MonkeyPatch):
-    """Load jonr_vac.error_events with its two lazy HA touchpoints stubbed.
+    """Load jonr_local.error_events with its two lazy HA touchpoints stubbed.
 
     The module imports no HA at load time; the lazy imports inside methods
     (persistent_notification, entity_registry) hit these stubs. const and the
@@ -335,8 +335,8 @@ def load_error_events_module(monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setitem(sys.modules, mod_name, mod)
 
     _bootstrap_jonr_pkg(monkeypatch)
-    monkeypatch.delitem(sys.modules, "jonr_vac.error_events", raising=False)
-    return importlib.import_module("jonr_vac.error_events")
+    monkeypatch.delitem(sys.modules, "jonr_local.error_events", raising=False)
+    return importlib.import_module("jonr_local.error_events")
 
 
 class FakeStore:
@@ -364,7 +364,7 @@ class FakeStore:
 
 
 def load_map_cache_module(monkeypatch: pytest.MonkeyPatch):
-    """Load jonr_vac.map_cache with HA's Store replaced by FakeStore."""
+    """Load jonr_local.map_cache with HA's Store replaced by FakeStore."""
 
     def _make(name: str, **attrs) -> ModuleType:
         m = ModuleType(name)
@@ -380,17 +380,17 @@ def load_map_cache_module(monkeypatch: pytest.MonkeyPatch):
     ]:
         monkeypatch.setitem(sys.modules, mod_name, mod)
 
-    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_vac"
-    pkg = ModuleType("jonr_vac")
+    pkg_root = Path(__file__).resolve().parents[2] / "custom_components" / "jonr_local"
+    pkg = ModuleType("jonr_local")
     pkg.__path__ = [str(pkg_root)]
-    monkeypatch.setitem(sys.modules, "jonr_vac", pkg)
+    monkeypatch.setitem(sys.modules, "jonr_local", pkg)
 
-    const_stub = _make("jonr_vac.const", DOMAIN="jonr_vac")
-    monkeypatch.setitem(sys.modules, "jonr_vac.const", const_stub)
+    const_stub = _make("jonr_local.const", DOMAIN="jonr_local")
+    monkeypatch.setitem(sys.modules, "jonr_local.const", const_stub)
 
     for name in list(sys.modules):
-        if name == "jonr_vac.map_cache":
+        if name == "jonr_local.map_cache":
             monkeypatch.delitem(sys.modules, name, raising=False)
 
-    module = importlib.import_module("jonr_vac.map_cache")
+    module = importlib.import_module("jonr_local.map_cache")
     return module, FakeStore

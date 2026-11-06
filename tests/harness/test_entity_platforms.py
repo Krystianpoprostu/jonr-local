@@ -10,10 +10,10 @@ from homeassistant.components.vacuum import VacuumEntityFeature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from custom_components.jonr_vac.coordinator import JonrVacuumCoordinator
-from custom_components.jonr_vac.device import VacuumStatus
-from custom_components.jonr_vac.number import VolumeNumber, async_setup_entry as number_setup
-from custom_components.jonr_vac.const import (
+from custom_components.jonr_local.coordinator import JonrVacuumCoordinator
+from custom_components.jonr_local.device import VacuumStatus
+from custom_components.jonr_local.number import VolumeNumber, async_setup_entry as number_setup
+from custom_components.jonr_local.const import (
     CONF_DEVICE_ID,
     CONF_PASS_TOKEN,
     CONF_SERVER,
@@ -22,18 +22,18 @@ from custom_components.jonr_vac.const import (
     CONF_USER_ID,
     CONF_USERNAME,
 )
-from custom_components.jonr_vac.select import (
+from custom_components.jonr_local.select import (
     JonrActiveMapSelect,
     JonrVacuumSelect,
     async_setup_entry as select_setup,
 )
-from custom_components.jonr_vac.spec.types import Action, MapCapability
-from custom_components.jonr_vac.switch import (
+from custom_components.jonr_local.spec.types import Action, MapCapability
+from custom_components.jonr_local.switch import (
     AlarmSwitch,
     RepeatSwitch,
     async_setup_entry as switch_setup,
 )
-from custom_components.jonr_vac.vacuum import JonrVacuum
+from custom_components.jonr_local.vacuum import JonrVacuum
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -329,7 +329,7 @@ async def test_vacuum_clean_segment_uses_local_when_no_cloud_session(
     vac = JonrVacuum(coord, entry)
     vac.hass = hass
 
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud") as cloud_cls:
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud") as cloud_cls:
         await vac.async_clean_segment(segments=[1, 2])
 
     cloud_cls.assert_not_called()
@@ -369,7 +369,7 @@ async def test_vacuum_clean_segment_uses_cloud_first_when_session_present(
     # set-room-clean rejected, start-room-sweep accepted — cloud still resolves
     # on its own without ever falling back to local.
     cloud.cloud_action.side_effect = [{"code": -1}, {"code": 0}]
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud", return_value=cloud):
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud", return_value=cloud):
         await vac.async_clean_segment(segments=[1, 2])
 
     coord.device.clean_segments.assert_not_called()
@@ -402,7 +402,7 @@ async def test_vacuum_clean_segment_falls_back_to_local_when_cloud_errors(
 
     cloud = MagicMock()
     cloud.restore_session.side_effect = RuntimeError("cloud session invalid")
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud", return_value=cloud):
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud", return_value=cloud):
         await vac.async_clean_segment(segments=[1, 2])
 
     coord.device.clean_segments.assert_called_once_with([1, 2])
@@ -421,7 +421,7 @@ async def test_vacuum_clean_segment_does_not_cloud_retry_other_failures(
     vac.hass = hass
 
     with (
-        patch("custom_components.jonr_vac.vacuum.XiaomiCloud") as cloud_cls,
+        patch("custom_components.jonr_local.vacuum.XiaomiCloud") as cloud_cls,
         pytest.raises(HomeAssistantError, match="Room cleaning failed"),
     ):
         await vac.async_clean_segment(segments=[1, 2])
@@ -523,7 +523,7 @@ def test_push_raw_attrs_table_matches_status_and_profile() -> None:
     __init__ getattr watch loop never arms the prop)."""
     from dataclasses import fields as dc_fields
 
-    from custom_components.jonr_vac.spec.types import XtlCoreCapability
+    from custom_components.jonr_local.spec.types import XtlCoreCapability
 
     attrs = {f.name for f in dc_fields(VacuumStatus)}
     core_fields = {f.name for f in dc_fields(XtlCoreCapability)}
@@ -536,7 +536,7 @@ def test_watch_tuples_and_push_table_stay_in_sync() -> None:
     """Every watched gear/ext field needs a fold entry (a missing one makes
     the push a silent no-op), and the table must not name fields the watch
     loops never arm (dead entries pretending to be folded)."""
-    from custom_components.jonr_vac import _WATCH_EXT_SETTINGS, _WATCH_GEARS
+    from custom_components.jonr_local import _WATCH_EXT_SETTINGS, _WATCH_GEARS
 
     watched = set(_WATCH_GEARS) | set(_WATCH_EXT_SETTINGS)
     assert watched == set(JonrVacuumCoordinator._PUSH_RAW_ATTRS)
@@ -574,7 +574,7 @@ async def test_active_map_select_options_current_and_switch_uses_local_when_no_c
     assert sel.options == ["Ground", "Upstairs"]
     assert sel.current_option == "Ground"
 
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud") as cloud_cls:
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud") as cloud_cls:
         await sel.async_select_option("Upstairs")
 
     cloud_cls.assert_not_called()
@@ -606,7 +606,7 @@ async def test_active_map_select_switch_uses_cloud_first_when_session_present(
 
     cloud = MagicMock()
     cloud.cloud_action.return_value = {"code": 0}
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud", return_value=cloud):
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud", return_value=cloud):
         await sel.async_select_option("Upstairs")
 
     cloud.cloud_action.assert_called_once_with("sg", "did123", 7, 8, [2])
@@ -638,7 +638,7 @@ async def test_active_map_select_switch_falls_back_to_local_when_cloud_errors(
 
     cloud = MagicMock()
     cloud.restore_session.side_effect = RuntimeError("cloud session invalid")
-    with patch("custom_components.jonr_vac.vacuum.XiaomiCloud", return_value=cloud):
+    with patch("custom_components.jonr_local.vacuum.XiaomiCloud", return_value=cloud):
         await sel.async_select_option("Upstairs")
 
     coord.device.set_current_map.assert_called_once_with(2)

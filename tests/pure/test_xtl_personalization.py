@@ -21,7 +21,7 @@ def _load(monkeypatch):
     slept: list = []
     monkeypatch.setattr(device_mod.time, "sleep", slept.append)
     device = device_mod.XtlVacuumDevice("host", "token", "xtl.vacuum.xm2216")
-    xtl = importlib.import_module("jonr_vac.spec.profiles.xtl")
+    xtl = importlib.import_module("jonr_local.spec.profiles.xtl")
     return device, xtl, slept
 
 
