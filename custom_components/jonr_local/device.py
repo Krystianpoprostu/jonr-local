@@ -983,7 +983,11 @@ class XtlVacuumDevice:
         if isinstance(cap, XtlMapCapability):
             if cap.set_current_map is None:
                 raise ValueError(f"{self.model} has no map-switch capability")
-            self._action(cap.set_current_map, [int(map_id)])
+            res = self._action(cap.set_current_map, [int(map_id)])
+            # A refused switch must not look like success (the saved-map
+            # select only serves the new floor once the robot acked it).
+            if isinstance(res, dict) and res.get("code", 0) != 0:
+                raise ValueError(f"switch-map refused by the robot (code {res.get('code')})")
             return
         raise ValueError(f"{self.model} has no map-switch capability")
 

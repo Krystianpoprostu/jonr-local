@@ -95,6 +95,6 @@ Seven consumable-life resets — `reset_main_brush`, `reset_side_brush`,
 |---|---|
 | `sensor.<name>_last_clean` (pl: `…_ostatnie_sprzatanie`) | Coverage % of the last finished task. Attributes hold the full record (rooms, area, expected area, dock returns, errors, times). Only on *saved map* entries. |
 | `camera.<name>_map` | Served from the saved copy. No live robot position. |
-| Active map select | Not created on *saved map* entries. |
+| `select.<name>_active_map` | Floors of the saved copy. Selecting one sends switch-map (17.9) over the LAN, then serves that floor. |
 
 See [Fully local mode](LOCAL_MODE.md).

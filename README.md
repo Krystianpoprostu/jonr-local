@@ -22,7 +22,7 @@ Assistant, and from then on it is served locally.
 | ⚙️ Modes | work mode, fan, water, mop route, passes, carpet strategy, carpet boost, edge mopping, resume after charge |
 | 🏠 Dock | wash / dry mops, empty dust, auto-dry, auto-empty, drying time, mop-wash interval, tank and bag states |
 | 🧰 Consumables | life of 7 parts + reset buttons |
-| 🗺️ Map | floor-plan camera and an interactive Lovelace card (tap rooms to clean), served from the saved copy |
+| 🗺️ Map | floor-plan camera and an interactive Lovelace card (tap rooms to clean), served from the saved copy; **multiple floors** with an *Active map* switch |
 | 📋 Last-clean log | sensor + `jonr_local_clean_finished` event: rooms targeted, m² cleaned vs. room area (coverage %), dock returns, errors |
 | 🚨 Errors | robot and dock error sensors, bus events, optional notifications with the fix-it text |
 | 🌙 Settings | Do-Not-Disturb window and exceptions, child lock, volume, voice language, statistics |
@@ -62,6 +62,8 @@ and restart.
 4. Done. The password and the Xiaomi session are **not stored**; the
    integration now talks only to the robot on your LAN. You can block the
    robot's internet access on your router.
+
+**Several floors:** map each floor in Mi Home first (enable multi-floor maps there, robot online), then download the map — all saved floors come in at once. Switch floors with the *Active map* entity after carrying the robot to that floor.
 
 **Later, after re-mapping your home or changing rooms in Mi Home:** let the
 robot online until Mi Home shows the new map, then *JONR Local → Configure →

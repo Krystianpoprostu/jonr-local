@@ -656,7 +656,8 @@ class JonrVacuumOptionsFlow(OptionsFlow):
             return self.async_abort(reason="map_download_failed", description_placeholders={"error": str(err)})
         rooms = ", ".join(f"{name} ({rid})" for rid, name in summary["rooms"].items())
         return self.async_abort(reason="map_refreshed", description_placeholders={
-            "map": summary.get("map_name") or str(summary.get("map_id")), "rooms": rooms})
+            "map": summary.get("map_name") or str(summary.get("map_id")), "rooms": rooms,
+            "floors": ", ".join(summary.get("maps", {}).values()) or "—"})
 
     async def async_step_miot_oauth_auth(
         self, user_input: dict[str, Any] | None = None

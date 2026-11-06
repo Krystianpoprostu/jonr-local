@@ -196,7 +196,7 @@
     },
     "abort": {
       "oauth_local_only": "Cet aspirateur a été ajouté en local uniquement : il n'a pas de session cloud Xiaomi à lier à OAuth.",
-      "map_refreshed": "Map **{map}** saved. Rooms: {rooms}. Room ids are what jonr_local.clean_segment uses.",
+      "map_refreshed": "Saved maps: {floors}. Active: **{map}** — rooms: {rooms}. Switch floors with the *Active map* entity; room ids are what jonr_local.clean_segment uses.",
       "map_download_failed": "The map could not be downloaded: {error}",
       "device_not_on_account": "This robot was not found on that Xiaomi account. Sign in with the account the robot is paired to in Mi Home.",
       "login_failed": "Sign-in failed: {reason}",

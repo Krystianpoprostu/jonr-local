@@ -121,7 +121,8 @@ async def test_saved_map_mode_end_to_end(hass: HomeAssistant, no_cloud, miot) ->
     vac = _ids(hass, "vacuum")[0]
     cam = _ids(hass, "camera")[0]
     assert hass.states.get(cam).state == "unavailable"          # nothing imported yet
-    assert not [s for s in _ids(hass, "select") if "map" in s]   # no map switch in this mode
+    sel = [s for s in _ids(hass, "select") if s.endswith("active_map")]
+    assert sel and hass.states.get(sel[0]).state == "unavailable"   # no floors until a map is imported
 
     resp = await hass.services.async_call(
         DOMAIN, "import_map",
@@ -409,3 +410,93 @@ def test_download_map_once_uses_lan_names_and_validates() -> None:
     dev.map_obj_name.return_value = None
     with pytest.raises(ValueError, match="no map yet"):
         download_map_once(cloud, "de", "123", dev)
+
+
+# --- multi-floor: every saved map from the catalogue, switchable locally --------
+from custom_components.jonr_local.saved_map import build_views, catalog_map_files  # noqa: E402
+
+
+def _catalog_entry(map_id, name, status, room_names, room_ids=None):
+    f = json.loads(synthetic_map(map_id))["fields"]
+    areas = json.loads(f[3])
+    for i, a in enumerate(areas):
+        a["name"] = room_names[i]
+        if room_ids:
+            a["room_id"] = room_ids[i]
+    return {"mapId": map_id, "name": name, "saved": 1, "status": status, "mapData": f[0],
+            "areas": json.dumps(areas), "virtualWalls": "", "mopWalls": "", "carpet": "", "thres": "",
+            "carpetprefer": []}
+
+
+TWO_FLOORS = json.dumps([
+    _catalog_entry(3, "Parter", 1, ["Room A", "Room B"]),
+    _catalog_entry(5, "Pietro", 0, ["Attic", "Office"], room_ids=[8, 9]),
+    {"mapId": 0, "name": "", "saved": 0, "status": 0, "mapData": "x"},   # live draft: never a target
+])
+
+
+def test_catalog_map_files_and_build_views() -> None:
+    files = catalog_map_files(TWO_FLOORS)
+    assert sorted(files) == [3, 5]
+    views, active = build_views(synthetic_map(3).encode(), TWO_FLOORS.encode())
+    assert active == 3 and sorted(views) == [3, 5]
+    assert views[5].room_names == {8: "Attic", 9: "Office"} and views[5].map_name == "Pietro"
+    # catalogue alone (no current-map file) still yields every floor; status=1 is active
+    views, active = build_views(None, TWO_FLOORS.encode())
+    assert active == 3 and sorted(views) == [3, 5]
+
+
+async def test_switch_floor_locally(hass: HomeAssistant, no_cloud, miot) -> None:
+    entry = await _setup(hass, miot)
+    vac = _ids(hass, "vacuum")[0]
+    resp = await hass.services.async_call(DOMAIN, "import_map", {
+        "entity_id": vac, "map_raw": synthetic_map(3), "map_infos_raw": TWO_FLOORS},
+        blocking=True, return_response=True)
+    assert resp[vac]["maps"] == {"3": "Parter", "5": "Pietro"}
+    await hass.async_block_till_done()
+    sel = [s for s in _ids(hass, "select") if s.endswith("active_map")][0]
+    st = hass.states.get(sel)
+    assert st.state == "Parter" and st.attributes["options"] == ["Parter", "Pietro"]
+
+    miot.call_action_by.reset_mock()
+    miot.call_action_by.return_value = {"code": 0}
+    await hass.services.async_call("select", "select_option",
+                                   {"entity_id": sel, "option": "Pietro"}, blocking=True)
+    await hass.async_block_till_done()
+    assert (17, 9, [{"did": "-", "piid": 58, "value": 5}]) in [c.args for c in miot.call_action_by.call_args_list]
+    assert hass.states.get(sel).state == "Pietro"
+    cam = _ids(hass, "camera")[0]
+    assert set(hass.states.get(cam).attributes["rooms"]) == {"8", "9"}
+    # room services follow the active floor
+    with pytest.raises(HomeAssistantError, match="not in the saved map"):
+        await hass.services.async_call(DOMAIN, "clean_segment", {"entity_id": vac, "segments": [3]}, blocking=True)
+
+    # a refused switch keeps the previous floor
+    miot.call_action_by.return_value = {"code": -9999}
+    with pytest.raises(HomeAssistantError, match="did not accept"):
+        await hass.services.async_call("select", "select_option",
+                                       {"entity_id": sel, "option": "Parter"}, blocking=True)
+    assert hass.states.get(sel).state == "Pietro"
+
+    # the active floor survives a restart
+    miot.call_action_by.return_value = {"code": 0}
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get(sel).state == "Pietro"
+    assert set(hass.states.get(cam).attributes["rooms"]) == {"8", "9"}
+
+
+async def test_legacy_single_map_store_still_loads(hass: HomeAssistant, no_cloud, miot, hass_storage) -> None:
+    entry_id = "legacyentry"
+    hass_storage[f"{DOMAIN}_saved_map_{entry_id}"] = {"version": 1, "key": f"{DOMAIN}_saved_map_{entry_id}", "data": {
+        "map_raw": synthetic_map(3), "map_infos_raw": INFOS, "imported_at": "x", "source": "v0.2",
+        "prefer_overrides": {"3": {"wind": 3}}}}
+    entry = MockConfigEntry(domain=DOMAIN, version=2, unique_id="aa:bb:cc:dd:ee:09", entry_id=entry_id, data={
+        CONF_HOST: "192.0.2.10", CONF_TOKEN: "0" * 32, CONF_MODEL: MODEL,
+        CONF_MAC: "aa:bb:cc:dd:ee:09", CONF_MAP_MODE: MAP_MODE_SAVED})
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    rooms = hass.states.get(_ids(hass, "camera")[0]).attributes["rooms"]
+    assert rooms["3"]["prefer"]["wind"] == 3

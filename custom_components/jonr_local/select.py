@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -82,11 +83,11 @@ async def async_setup_entry(
 
     map_coordinator = entry.runtime_data.map
     cap = coordinator.device.profile.map
-    if (
+    if getattr(map_coordinator, "is_saved_map", False):
+        if isinstance(cap, XtlMapCapability) and cap.set_current_map is not None:
+            entities.append(JonrSavedMapSelect(map_coordinator, entry))
+    elif (
         map_coordinator is not None
-        # Saved-map entries hold one imported floor: switching would leave
-        # the copy describing the wrong map, so no switch control there.
-        and not getattr(map_coordinator, "is_saved_map", False)
         and isinstance(cap, XtlMapCapability)
         and cap.set_current_map is not None
         and cap.get_map_list is not None
@@ -257,3 +258,61 @@ class JonrActiveMapSelect(CoordinatorEntity[JonrMapCoordinator], SelectEntity):
                 _LOGGER.warning("%s: local switch-map retry failed: %s",
                                 device.model, local_err)
             await self.coordinator.async_request_refresh()
+
+
+class JonrSavedMapSelect(CoordinatorEntity, SelectEntity):
+    """Switch floors on a fully local entry (fork).
+
+    Options are the floors of the saved copy (every saved map from the
+    downloaded catalogue). Selecting one closes a running task first (the
+    firmware ignores switch-map while a task is open), sends switch-map 17.9
+    over the LAN, and only then serves that floor's map and room ids."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "active_map"
+    _attr_icon = "mdi:layers-triple"
+
+    def __init__(self, coordinator, entry: JonrConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        base = entry.unique_id or entry.entry_id
+        self._attr_unique_id = f"{base}_active_map"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, base)})
+
+    def _labels(self) -> dict[str, int]:
+        return {name: mid for mid, name in self.coordinator.maps.items()}
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(self.coordinator.maps)
+
+    @property
+    def options(self) -> list[str]:
+        return list(self._labels())
+
+    @property
+    def current_option(self) -> str | None:
+        active = self.coordinator.active_map_id
+        return next((n for n, mid in self._labels().items() if mid == active), None)
+
+    async def async_select_option(self, option: str) -> None:
+        map_id = self._labels().get(option)
+        if map_id is None:
+            raise HomeAssistantError(f"Unknown map {option!r}")
+        if map_id == self.coordinator.active_map_id:
+            return
+        device = self.coordinator.device
+        control = getattr(self._entry.runtime_data, "control", None)
+        activity = getattr(getattr(control, "data", None), "activity", None)
+        if activity in ("cleaning", "paused", "returning", "localizing"):
+            try:
+                await self.hass.async_add_executor_job(device.stop)
+            except Exception:  # noqa: BLE001 - an idle stop may still ack an error
+                pass
+        try:
+            await self.hass.async_add_executor_job(device.set_current_map, map_id)
+        except Exception as err:  # noqa: BLE001
+            raise HomeAssistantError(f"The robot did not accept the map switch: {err}") from err
+        await self.coordinator.async_set_active(map_id)
+        if control is not None:
+            control.async_schedule_confirm()

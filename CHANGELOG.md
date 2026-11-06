@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 — 2026-11-07
+
+Multiple floors.
+
+- Every saved map is imported at once: the map catalogue the robot uploads
+  carries each floor's raster, rooms, virtual walls, mop walls, carpets and
+  sills, so one download yields all floors (verified identical to the
+  current-map file: rooms, walls, calibration, dock).
+- New **Active map** select on local entries: switches floors with
+  switch-map (17.9) over the LAN — a running task is stopped first, and the
+  new floor (camera, map card, room ids, room services, last-clean log) is only
+  served once the robot acks the switch; a refused switch keeps the old floor.
+- The active floor is remembered across restarts; per-room preference
+  overrides are kept per floor (older single-map copies migrate automatically).
+- *Download / refresh the map* now lists all saved floors.
+
 ## 0.2.1 — 2026-11-07
 
 - Fix hassfest validation: the guide link in the *Device IP & token + saved map*

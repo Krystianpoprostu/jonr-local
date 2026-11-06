@@ -721,7 +721,7 @@
     },
     "abort": {
       "oauth_local_only": "Ten odkurzacz został dodany jako tylko-lokalny, więc nie ma sesji w chmurze Xiaomi, do której można by połączyć OAuth.",
-      "map_refreshed": "Mapa **{map}** zapisana. Pokoje: {rooms}. Te numery pokoi przyjmuje usługa jonr_local.clean_segment.",
+      "map_refreshed": "Zapisane mapy: {floors}. Aktywna: **{map}** — pokoje: {rooms}. Piętro zmienisz encją *Aktywna mapa*; te numery pokoi przyjmuje usługa jonr_local.clean_segment.",
       "map_download_failed": "Nie udało się pobrać mapy: {error}",
       "device_not_on_account": "Nie znaleziono tego robota na tym koncie Xiaomi. Zaloguj się kontem, do którego robot jest dodany w Mi Home.",
       "login_failed": "Logowanie nieudane: {reason}",

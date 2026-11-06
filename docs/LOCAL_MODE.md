@@ -29,7 +29,7 @@ firmware `4.5.6_0805`.
 | Getting a new map after changes in the home | ☁️ one-time sign-in from *Configure* (or the PC tools), then local again |
 | MQTT instant updates | ❌ not used. The 10 s LAN poll is the only source |
 | Cleaning history from the robot (17.46) | ❌ never answers over the LAN. Use the last-clean log instead |
-| Map switching | ❌ not offered (only one saved map) |
+| Map switching (several floors) | ✅ LAN (17.9) via the *Active map* select; all floors come from one download |
 
 At runtime a local entry creates **no** Xiaomi cloud session, no MQTT client
 and no map polling (`__init__.py` → `SavedMapCoordinator`). The harness tests run
@@ -87,6 +87,22 @@ bbox, preferences), `calibration.json`, `attributes.json`, `vector.json`,
 
 If the robot ever reports a room id the saved copy does not know, HA raises a
 **Repairs** issue "Saved map looks outdated".
+
+## Multiple floors
+
+1. In Mi Home (robot online): turn on multi-floor maps, carry the robot to the
+   other floor, map it and save the map. Repeat per floor.
+2. *JONR Local → Configure → Download / refresh the map from your Xiaomi
+   account*. The robot uploads one map catalogue that holds **every** saved
+   floor (raster, rooms, walls, carpets), so all floors arrive in one download.
+3. Carry the robot to a floor and pick it in **Active map**
+   (`select.<name>_active_map`). The switch is sent over the LAN (switch-map
+   17.9). A running task is stopped first, and HA only shows the new floor
+   (map, room ids, room services, last-clean log) after the robot accepts it.
+
+The robot reports no "current floor" over the LAN, so HA remembers the last
+switch it made. If you switch floors in Mi Home instead, pick the same floor
+in HA too.
 
 ## Last-clean log
 
