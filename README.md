@@ -72,7 +72,9 @@ Download / refresh the map from your Xiaomi account*.
 If the map is missing (e.g. the download failed during setup), Home Assistant
 shows a **Repairs** entry with these steps.
 
-Add the map card to a dashboard:
+Add the map card to a dashboard. Rooms are picked **on this card** (swipe to
+the map page, tap rooms, then *Clean N rooms*); the map camera itself is a
+plain image and is not clickable:
 
 ```yaml
 type: custom:xiaomi-vac-card
