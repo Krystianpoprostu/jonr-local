@@ -11,6 +11,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import JonrConfigEntry
 from .const import DOMAIN
 from .coordinator import JonrVacuumCoordinator
+from .room_switch import room_switches
 from .spec.profiles.xtl import xtl_dnd_merged, xtl_parse_dnd
 from .spec.types import XtlCoreCapability
 
@@ -81,6 +82,7 @@ async def async_setup_entry(
                 for cfg in XTL_STATION_SWITCHES
                 if getattr(core, cfg[2], None) is not None
             ]
+    entities += room_switches(hass, entry, coordinator)
     async_add_entities(entities)
 
 

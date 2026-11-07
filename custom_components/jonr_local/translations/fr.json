@@ -676,6 +676,9 @@
       },
       "collect_dust": {
         "name": "Vider la poussière"
+      },
+      "room_clean": {
+        "name": "Clean {room}"
       }
     },
     "time": {

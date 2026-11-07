@@ -676,6 +676,9 @@
       },
       "collect_dust": {
         "name": "Empty dust bin"
+      },
+      "room_clean": {
+        "name": "Clean {room}"
       }
     },
     "time": {

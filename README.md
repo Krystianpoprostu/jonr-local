@@ -82,6 +82,12 @@ water: select.<your_robot>_water_level   # use your entity ids
 fan: select.<your_robot>_fan_speed
 ```
 
+**Room switches (voice in any language):** every map room gets a switch
+(*Clean Kitchen*): on = clean that room, off = stop and dock. Expose them to
+Google Assistant / Alexa and say "turn on kitchen cleaning"; several rooms
+switched on within 3 s become one clean. Rename them freely in HA (Google
+uses the HA name).
+
 **Rooms by area / voice (HA 2026.3+):** open the vacuum entity → settings →
 map Home Assistant areas to the robot's rooms. Then `vacuum.clean_area`, Assist
 and Google Assistant ("Hey Google, vacuum the kitchen" — after "sync my

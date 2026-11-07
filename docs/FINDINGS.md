@@ -286,3 +286,16 @@ Użytkownik oczekiwał nowej integracji, a nie podmienionego `jonr_vac`. Zrobion
 - Test `test_clean_area_maps_areas_to_rooms`: lista segmentów przez WS `vacuum/get_segments`, mapowanie obszaru,
   `vacuum.clean_area` → 17.1 typ 3 `[4]` (żadnego startu całego domu), odmowa innego piętra, naprawa.
   Cały zestaw: 400 OK / 30 FAIL / 2 ERROR; zestaw niepowodzeń identyczny jak bez zmiany (stare testy upstream).
+
+### Etap 9: włączniki pokoi (v0.3.2, 2026-11-07)
+- Test na żywo v0.3.1: „Ok Google, odkurz kuchnię” i „odkurz w kuchni” (21:16 i 21:23 czasu lokalnego) → Google wysłał
+  sam `StartStop`, robot zgłosił kod 2 (cały dom). Google odpowiedział „zacznę sprzątanie kuchni”, ale strefy nie
+  przekazał, także po zabraniu robota z obszaru Kuchnia. Wniosek: polski Asystent nie korzysta ze stref odkurzacza
+  z HA (nie da się tego zmienić po stronie HA). Natywne clean area zostaje dla HA/Assist.
+- Zmiana: `room_switch.py`, czyli jeden `switch` na pokój (unique_id `<base>_room_clean_<map>_<room>`). ON zbiera
+  pokoje przez 3 s, potem `jonr_local.clean_segment` (dołącza pokoje z trwającego sprzątania pokoi). OFF
+  `return_to_base`, jeśli pokój jest sprzątany. Stan: optymistycznie 120 s, potem 17.9 ∈ {8,9,10} i pokój w 17.34.
+  Inne piętro jest odrzucane. Zmiana zestawu pokoi po imporcie mapy → `async_schedule_reload`.
+- Test `test_room_switches_batch_and_merge`: dwa ON → jedno 17.1 typ 3 `[3, 4]`, nigdy cały dom; dołączanie do
+  trwającego sprzątania; OFF. Cały zestaw: 401 OK / 30 FAIL / 2 ERROR, zestaw niepowodzeń identyczny jak przed
+  zmianami.

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.2 — 2026-11-07
+
+Room switches — rooms by voice in any language.
+
+- One switch per map room ("Clean Kitchen"): ON cleans that room, OFF
+  stops and docks; it reads ON while the robot cleans that room. Voice
+  assistants handle on/off switches in every language ("Hey Google, turn on
+  kitchen cleaning"), unlike vacuum zones — Google Assistant in Polish sent a
+  bare start for "vacuum the kitchen" (whole home).
+- Rooms switched on within 3 s are merged into one clean ("turn on kitchen
+  and living-room cleaning"); a room switched on during a room clean joins
+  it.
+- Rooms on another floor are refused. The switch set follows the map: the
+  entry reloads itself when a map download adds or removes rooms.
+
 ## 0.3.1 — 2026-11-07
 
 Rooms by voice ("Hey Google, vacuum the kitchen").

@@ -565,6 +565,9 @@
       },
       "collect_dust": {
         "name": "Staubbehälter entleeren"
+      },
+      "room_clean": {
+        "name": "Clean {room}"
       }
     },
     "number": {

@@ -182,6 +182,7 @@ async def test_clean_log_records_a_room_task(hass: HomeAssistant, no_cloud, miot
     await hass.services.async_call(DOMAIN, "import_map",
                                    {"entity_id": vac, "map_raw": synthetic_map()},
                                    blocking=True, return_response=True)
+    await hass.async_block_till_done()   # new rooms -> the entry reloads (room switches)
     events = []
     hass.bus.async_listen(EVENT_CLEAN_FINISHED, events.append)
     control = entry.runtime_data.control
@@ -552,3 +553,68 @@ async def test_clean_area_maps_areas_to_rooms(hass: HomeAssistant, hass_ws_clien
     ent._check_segments()
     assert [i for i in ir.async_get(hass).issues if i[0] == "vacuum"]
     assert entry.state is ConfigEntryState.LOADED
+
+
+# --- room switches (voice: "turn on kitchen cleaning") -------------------------
+async def test_room_switches_batch_and_merge(hass: HomeAssistant, no_cloud, miot) -> None:
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+    from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
+    entry = await _setup(hass, miot)
+    assert not [s for s in _ids(hass, "switch") if "room_clean" in s or "clean_room" in s]
+    vac = _ids(hass, "vacuum")[0]
+    await hass.services.async_call(
+        DOMAIN, "import_map",
+        {"entity_id": vac, "map_raw": synthetic_map(), "map_infos_raw": INFOS, "source": "test"},
+        blocking=True, return_response=True)
+    await hass.async_block_till_done()       # room set changed -> entry reloads itself
+    sw = {hass.states.get(e).attributes["room_id"]: e for e in _ids(hass, "switch")
+          if "room_id" in hass.states.get(e).attributes}
+    assert set(sw) == {3, 4}
+    assert hass.states.get(sw[3]).attributes["friendly_name"].endswith("Clean Room A")
+    assert hass.states.get(sw[3]).state == "off"
+
+    def room_starts():
+        return [c.args[2][1]["value"] for c in miot.call_action_by.call_args_list
+                if c.args[:2] == (17, 1) and c.args[2][0]["value"] == 3]
+
+    # Two rooms switched on within the window -> ONE room clean of both.
+    miot.call_action_by.reset_mock()
+    with patch("custom_components.jonr_local.device.time.sleep"):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": sw[3]}, blocking=True)
+        await hass.services.async_call("switch", "turn_on", {"entity_id": sw[4]}, blocking=True)
+        assert hass.states.get(sw[3]).state == "on"          # optimistic right away
+        assert room_starts() == []                           # still collecting
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=4))
+        await hass.async_block_till_done()
+    assert room_starts() == ["[3, 4]"] or room_starts() == ["[3,4]"]
+    assert not [c for c in miot.call_action_by.call_args_list
+                if c.args[:2] == (17, 1) and c.args[2][0]["value"] != 3]   # never whole-home
+
+    # A room added while a room clean runs joins it.
+    sb = entry.runtime_data
+    for b in [e for e in hass.data["entity_components"]["switch"].entities if getattr(e, "_batcher", None)]:
+        b._batcher.optimistic.clear()
+    entry.runtime_data.control.async_set_updated_data(
+        _status(activity="cleaning", raw_status=7, robot_status_raw=8, clean_values_raw="[3]"))
+    await hass.async_block_till_done()
+    assert hass.states.get(sw[3]).state == "on" and hass.states.get(sw[4]).state == "off"
+    miot.call_action_by.reset_mock()
+    with patch("custom_components.jonr_local.device.time.sleep"):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": sw[4]}, blocking=True)
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=8))
+        await hass.async_block_till_done()
+    assert room_starts() in (["[3, 4]"], ["[3,4]"])
+
+    # OFF on a running room -> return to dock; OFF on an idle room -> nothing.
+    entry.runtime_data.control.async_set_updated_data(
+        _status(activity="cleaning", raw_status=7, robot_status_raw=8, clean_values_raw="[3,4]"))
+    with patch("custom_components.jonr_local.vacuum.JonrVacuum.async_return_to_base") as rtb:
+        await hass.services.async_call("switch", "turn_off", {"entity_id": sw[3]}, blocking=True)
+        assert rtb.call_count == 1
+        entry.runtime_data.control.async_set_updated_data(_status())
+        await hass.services.async_call("switch", "turn_off", {"entity_id": sw[3]}, blocking=True)
+        assert rtb.call_count == 1
+    assert sb is entry.runtime_data
