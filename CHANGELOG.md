@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.3 — 2026-11-07
+
+Map card: rooms only on the floor the robot is on.
+
+- On the page of a floor the robot is not on, rooms are dimmed and can't be
+  selected (a short note says to switch the floor first). Room ids repeat
+  across floors, so a pick there would have cleaned the same-numbered rooms
+  on the active floor.
+- The card sends the floor with the rooms (`clean_segment` gets an optional
+  `map_id`); the integration refuses a floor that is not the active one —
+  also covers a stale card after someone switched floors. Calls without
+  `map_id` (automations) behave as before.
+
 ## 0.3.2 — 2026-11-07
 
 Room switches — rooms by voice in any language.

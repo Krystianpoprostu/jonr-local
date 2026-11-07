@@ -621,6 +621,10 @@
         "segments": {
           "name": "Pokoje",
           "description": "Lista ID pokojów do czyszczenia (z atrybutu \"rooms\" kamery mapy)."
+        },
+        "map_id": {
+          "name": "Piętro (id mapy)",
+          "description": "Id mapy piętra, do którego należą pokoje (wysyła je karta mapy). Jeśli to nie jest aktywne piętro, wywołanie zostanie odrzucone. Pomiń dla aktywnego piętra."
         }
       }
     },

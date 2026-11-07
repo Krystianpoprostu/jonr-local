@@ -299,3 +299,14 @@ Użytkownik oczekiwał nowej integracji, a nie podmienionego `jonr_vac`. Zrobion
 - Test `test_room_switches_batch_and_merge`: dwa ON → jedno 17.1 typ 3 `[3, 4]`, nigdy cały dom; dołączanie do
   trwającego sprzątania; OFF. Cały zestaw: 401 OK / 30 FAIL / 2 ERROR, zestaw niepowodzeń identyczny jak przed
   zmianami.
+
+### Etap 10: karta mapy a piętra (v0.3.3, 2026-11-07)
+- Luka: karta pozwalała zaznaczać pokoje na stronie nieaktywnego piętra i wysyłała same numery. Numery pokoi
+  powtarzają się między piętrami, więc posprzątałaby pokoje o tych numerach na aktywnym piętrze.
+- Zmiana: slajd ma `data-map-id`/`data-active`. Na nieaktywnym piętrze pokoje są przyciemnione, zaznaczenie
+  zablokowane, pokazuje się komunikat (pl/en). Karta wysyła `map_id`, `clean_segment(map_id)` odrzuca nieaktywne
+  piętro. Bez `map_id` działa jak wcześniej.
+- Weryfikacja: składnia karty sprawdzona parserem QuickJS (brak Node.js). Test
+  `test_clean_segment_refuses_rooms_of_another_floor`. Cały zestaw: 402 OK / 30 FAIL / 2 ERROR, zestaw niepowodzeń
+  identyczny jak przed zmianami. Prawdziwe przełączanie pięter na robocie nadal NIE jest przetestowane (jedna
+  mapa).

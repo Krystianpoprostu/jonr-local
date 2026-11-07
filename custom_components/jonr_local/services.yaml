@@ -26,6 +26,18 @@ clean_segment:
           min: 1
           max: 2
           step: 1
+    map_id:
+      name: Floor (map id)
+      description: >-
+        Map id of the floor the rooms belong to (the map card sends it). If it
+        is not the active floor the call is refused. Omit for the active floor.
+      required: false
+      example: 1
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: box
 
 refresh_map:
   name: Refresh map

@@ -621,6 +621,10 @@
         "segments": {
           "name": "Cômodos",
           "description": "Lista de IDs de cômodo para limpar (do atributo \"rooms\" da câmera do mapa)."
+        },
+        "map_id": {
+          "name": "Floor (map id)",
+          "description": "Map id of the floor the rooms belong to (sent by the map card). Refused if it is not the active floor. Omit for the active floor."
         }
       }
     },

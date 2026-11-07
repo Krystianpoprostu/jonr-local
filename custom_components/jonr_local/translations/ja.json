@@ -621,6 +621,10 @@
         "segments": {
           "name": "部屋",
           "description": "清掃する部屋IDのリスト（マップカメラの\"rooms\"属性から）。"
+        },
+        "map_id": {
+          "name": "Floor (map id)",
+          "description": "Map id of the floor the rooms belong to (sent by the map card). Refused if it is not the active floor. Omit for the active floor."
         }
       }
     },

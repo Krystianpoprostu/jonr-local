@@ -354,6 +354,9 @@ class XiaomiVacCard extends HTMLElement {
         .pg-map{background:radial-gradient(120% 90% at 50% 0%,var(--xv-card),var(--xv-floor));
           box-sizing:border-box;padding:56px 14px 92px}
         .pg-map svg{width:100%;height:100%;display:block}
+        .toast{white-space:normal;max-width:88%;width:max-content;text-align:center}
+        .pg-map.inactive svg{opacity:.5;filter:grayscale(.6)}
+        .pg-map.inactive .rm{cursor:not-allowed}
         .map-badge{position:absolute;top:64px;right:20px;z-index:4;background:var(--xv-accent);color:#fff;
           font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;
           border-radius:9px;box-shadow:0 4px 12px color-mix(in srgb,var(--xv-accent) 40%,transparent);
@@ -488,7 +491,8 @@ class XiaomiVacCard extends HTMLElement {
     const mapOffset = this._mapOffset();
     const mapPages = this._enabled("show_map")
       ? this._maps().map((m, i) =>
-          `<div class="slide pg-map" data-mi="${i + mapOffset}">` +
+          `<div class="slide pg-map${m.active ? "" : " inactive"}" data-mi="${i + mapOffset}"` +
+          ` data-map-id="${m.map_id ?? ""}" data-active="${m.active ? 1 : 0}">` +
           (m.active ? `<div class="map-badge">Active</div>` : "") +
           `${this._mapSVG(m)}</div>`)
       : [];
@@ -534,6 +538,15 @@ class XiaomiVacCard extends HTMLElement {
     this._root.querySelectorAll(".rm").forEach((r) => {
       const toggle = () => {
         if (this._blockClick || !this._enabled("allow_room_cleaning")) return;
+        const slide = r.closest(".pg-map");
+        // Several floors: rooms on a floor the robot is not on share ids with
+        // the active floor's rooms — never let them be picked.
+        if (slide && slide.dataset.active === "0") {
+          this._toast(this._t("other_floor"), 2600);
+          return;
+        }
+        const mid = slide && slide.dataset.mapId !== "" ? Number(slide.dataset.mapId) : null;
+        if (this._selMap !== mid) { this._sel.clear(); this._selMap = mid; }
         const id = Number(r.dataset.id);
         this._sel.has(id) ? this._sel.delete(id) : this._sel.add(id);
         this._syncRooms();
@@ -781,15 +794,27 @@ class XiaomiVacCard extends HTMLElement {
     this._svc("select", "select_option", { entity_id: eid, option: next });
   }
   // brief pill of feedback for the icon-only cyclers (fan / water level)
-  _toast(text) {
+  _toast(text, ms = 1300) {
     const t = this._root && this._root.querySelector(".toast"); if (!t) return;
     t.textContent = text; t.classList.add("show");
     clearTimeout(this._toastT);
-    this._toastT = setTimeout(() => t.classList.remove("show"), 1300);
+    this._toastT = setTimeout(() => t.classList.remove("show"), ms);
+  }
+  _t(key) {
+    const lang = ((this._hass && (this._hass.locale?.language || this._hass.language)) || "en").slice(0, 2);
+    const T = {
+      other_floor: {
+        en: "The robot is on another floor — switch the floor first",
+        pl: "Robot jest na innym piętrze — najpierw przełącz piętro",
+      },
+    };
+    return (T[key] && (T[key][lang] || T[key].en)) || key;
   }
   _cleanSelected() {
     if (!this._sel.size || !this._enabled("allow_room_cleaning")) return;
-    this._svc("jonr_local", "clean_segment", { entity_id: this._config.vacuum, segments: [...this._sel] });
+    const data = { entity_id: this._config.vacuum, segments: [...this._sel] };
+    if (Number.isFinite(this._selMap)) data.map_id = this._selMap;
+    this._svc("jonr_local", "clean_segment", data);
     this._sel.clear(); this._syncRooms();
   }
 

@@ -621,6 +621,10 @@
         "segments": {
           "name": "房间",
           "description": "要清扫的房间ID列表（来自地图摄像头的\"rooms\"属性）。"
+        },
+        "map_id": {
+          "name": "Floor (map id)",
+          "description": "Map id of the floor the rooms belong to (sent by the map card). Refused if it is not the active floor. Omit for the active floor."
         }
       }
     },

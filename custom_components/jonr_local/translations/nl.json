@@ -621,6 +621,10 @@
         "segments": {
           "name": "Kamers",
           "description": "Lijst met kaameraID's om schoon te maken (van het attribuut \"rooms\" van de kaartcamera)."
+        },
+        "map_id": {
+          "name": "Floor (map id)",
+          "description": "Map id of the floor the rooms belong to (sent by the map card). Refused if it is not the active floor. Omit for the active floor."
         }
       }
     },

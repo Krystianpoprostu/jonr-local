@@ -732,6 +732,10 @@
         "segments": {
           "name": "Rooms",
           "description": "List of room ids to clean (from the map camera's \"rooms\" attribute)."
+        },
+        "map_id": {
+          "name": "Floor (map id)",
+          "description": "Map id of the floor the rooms belong to (sent by the map card). Refused if it is not the active floor. Omit for the active floor."
         }
       }
     },

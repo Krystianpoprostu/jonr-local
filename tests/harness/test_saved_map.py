@@ -618,3 +618,29 @@ async def test_room_switches_batch_and_merge(hass: HomeAssistant, no_cloud, miot
         await hass.services.async_call("switch", "turn_off", {"entity_id": sw[3]}, blocking=True)
         assert rtb.call_count == 1
     assert sb is entry.runtime_data
+
+
+# --- map card picks rooms per floor: clean_segment(map_id) guards the floor ----
+async def test_clean_segment_refuses_rooms_of_another_floor(hass: HomeAssistant, no_cloud, miot) -> None:
+    entry = await _setup(hass, miot)
+    vac = _ids(hass, "vacuum")[0]
+    await hass.services.async_call(DOMAIN, "import_map", {
+        "entity_id": vac, "map_raw": synthetic_map(3), "map_infos_raw": TWO_FLOORS},
+        blocking=True, return_response=True)
+    await hass.async_block_till_done()
+    # what the card reads: every floor carries its map id and the active flag
+    maps = entry.runtime_data.map.data.maps
+    assert [(m["map_id"], m["active"]) for m in maps] == [(3, True), (5, False)]
+
+    miot.call_action_by.reset_mock()
+    with pytest.raises(HomeAssistantError, match="floor Pietro"):
+        await hass.services.async_call(DOMAIN, "clean_segment",
+                                       {"entity_id": vac, "segments": [3], "map_id": 5}, blocking=True)
+    assert not [c for c in miot.call_action_by.call_args_list if c.args[:2] == (17, 1)]
+    with patch("custom_components.jonr_local.device.time.sleep"):
+        await hass.services.async_call(DOMAIN, "clean_segment",
+                                       {"entity_id": vac, "segments": [3], "map_id": 3}, blocking=True)
+        await hass.services.async_call(DOMAIN, "clean_segment",       # no map_id: as before
+                                       {"entity_id": vac, "segments": [4]}, blocking=True)
+    starts = [c.args[2][1]["value"] for c in miot.call_action_by.call_args_list if c.args[:2] == (17, 1)]
+    assert starts == ["[3]", "[4]"]

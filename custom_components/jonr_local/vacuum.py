@@ -90,6 +90,7 @@ async def async_setup_entry(
         {
             vol.Required("segments"): vol.All(cv.ensure_list, [vol.Coerce(int)]),
             vol.Optional("repeats"): vol.All(vol.Coerce(int), vol.Range(min=1, max=2)),
+            vol.Optional("map_id"): vol.Coerce(int),
         },
         "async_clean_segment",
     )
@@ -364,9 +365,20 @@ class JonrVacuum(CoordinatorEntity[JonrVacuumCoordinator], StateVacuumEntity):
             self._device.set_count(preset)
 
     async def async_clean_segment(self, segments: list[int],
-                                  repeats: int | None = None) -> None:
-        """Clean one or more rooms by their map room id (tap-to-clean)."""
+                                  repeats: int | None = None,
+                                  map_id: int | None = None) -> None:
+        """Clean one or more rooms by their map room id (tap-to-clean).
+
+        `map_id` (sent by the map card) names the floor the rooms were picked
+        on; room ids repeat across floors, so a floor the robot is not on is
+        refused instead of cleaning the same-numbered rooms here."""
         saved = self._saved_map()
+        if map_id is not None and saved is not None and map_id != saved.active_map_id:
+            floors = saved.maps
+            raise HomeAssistantError(
+                f"Those rooms are on floor {floors.get(map_id, map_id)}, the robot is on "
+                f"{floors.get(saved.active_map_id, saved.active_map_id)}. Carry the robot "
+                "there and switch the Active map first.")
         if saved is not None and saved.room_ids:
             unknown = sorted(set(int(s) for s in segments) - saved.room_ids)
             if unknown:
