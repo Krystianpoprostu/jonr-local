@@ -272,3 +272,17 @@ Użytkownik oczekiwał nowej integracji, a nie podmienionego `jonr_vac`. Zrobion
   dopisano 6 sekcji robota (69 kart: mapa `custom:xiaomi-vac-card`, przyciski pokoi z potwierdzeniem, tryb, stacja,
   części z resetem, ustawienia i statystyki). Wszystkie encje zweryfikowane z rejestrem. Poprzednia konfiguracja
   pulpitu jest w `local_data/dashboard_<name>_<ts>.json`.
+
+### Etap 8: pokoje głosem — natywne „clean area” (v0.3.1, 2026-11-07)
+- Objaw: „Ok Google, odkurz kuchnię” uruchamiało sprzątanie całego domu. Logbook 07:44:18 UTC: Google wysłał
+  tylko `StartStop`, bez strefy → `vacuum.start`.
+- Przyczyna (kod HA 2026.10.4, `google_assistant/trait.py`): Google dostaje `availableZones` i zamienia strefę na
+  `vacuum.clean_area` tylko wtedy, gdy encja ma `VacuumEntityFeature.CLEAN_AREA` i mapowanie obszarów
+  (`area_mapping` w opcjach encji). `vacuum.jonr_p20_pro` miał `supported_features` 12828, bez CLEAN_AREA (16384).
+- Zmiana: `vacuum.py` zgłasza CLEAN_AREA (gdy jest mapa), `async_get_segments` (id `"<map_id>_<room_id>"`,
+  `group` = nazwa piętra przy >1 piętrze), `async_clean_segments` → istniejące `async_clean_segment`; pokoje
+  z innego piętra są odrzucane; zmiana pokoi vs `last_seen_segments` → naprawa HA „segments changed”. Na HA bez
+  CLEAN_AREA kod jest nieaktywny.
+- Test `test_clean_area_maps_areas_to_rooms`: lista segmentów przez WS `vacuum/get_segments`, mapowanie obszaru,
+  `vacuum.clean_area` → 17.1 typ 3 `[4]` (żadnego startu całego domu), odmowa innego piętra, naprawa.
+  Cały zestaw: 400 OK / 30 FAIL / 2 ERROR; zestaw niepowodzeń identyczny jak bez zmiany (stare testy upstream).

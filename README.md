@@ -82,6 +82,11 @@ water: select.<your_robot>_water_level   # use your entity ids
 fan: select.<your_robot>_fan_speed
 ```
 
+**Rooms by area / voice (HA 2026.3+):** open the vacuum entity → settings →
+map Home Assistant areas to the robot's rooms. Then `vacuum.clean_area`, Assist
+and Google Assistant ("Hey Google, vacuum the kitchen" — after "sync my
+devices") clean only those rooms. Google matches the **HA area name**.
+
 Clean rooms from an automation (room ids are shown after the map download and
 in the map camera's `rooms` attribute):
 

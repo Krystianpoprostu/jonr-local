@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-11-07
+
+Rooms by voice ("Hey Google, vacuum the kitchen").
+
+- The vacuum now supports Home Assistant's native **clean area** (HA 2026.3+):
+  it reports the rooms of every saved floor as segments, so you can map HA
+  areas to rooms in the vacuum entity's settings. `vacuum.clean_area`, Assist
+  ("clean the kitchen") and Google Assistant room commands then clean just
+  those rooms. Before this, Google only knew start/stop and a room command
+  started a whole-home clean.
+- Rooms on a floor the robot is not on are refused (switch the Active map
+  first) instead of cleaning the wrong rooms.
+- When the saved rooms change after a re-map, HA raises its standard
+  "segments changed" repair so the area mapping can be fixed.
+- Older HA versions without clean area are unaffected.
+
 ## 0.3.0 — 2026-11-07
 
 Multiple floors.

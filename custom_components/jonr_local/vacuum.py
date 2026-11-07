@@ -48,6 +48,12 @@ from .spec.profiles.xtl import (
 )
 from .spec.types import XtlMapCapability
 
+try:  # HA 2026.3+: native "clean area" (areas mapped to vacuum segments)
+    from homeassistant.components.vacuum import Segment
+except ImportError:  # older HA: the feature simply stays off
+    Segment = None
+_CLEAN_AREA = getattr(VacuumEntityFeature, "CLEAN_AREA", None) if Segment else None
+
 # Serialise commands to the device (one MIoT write at a time).
 PARALLEL_UPDATES = 1
 
@@ -183,7 +189,12 @@ class JonrVacuum(CoordinatorEntity[JonrVacuumCoordinator], StateVacuumEntity):
             support |= VacuumEntityFeature.RETURN_HOME
         if core.locate is not None or core.alarm is not None:
             support |= VacuumEntityFeature.LOCATE
+        # Clean area (rooms by HA area: voice assistants, Google "clean the
+        # kitchen") needs a map to know the rooms.
+        if _CLEAN_AREA is not None and entry.runtime_data.map is not None:
+            support |= _CLEAN_AREA
         self._attr_supported_features = support
+        self._segment_sig: tuple | None = None
         base = entry.unique_id or entry.entry_id
         self._attr_unique_id = f"{base}_vacuum"
         self._attr_device_info = DeviceInfo(
@@ -226,6 +237,79 @@ class JonrVacuum(CoordinatorEntity[JonrVacuumCoordinator], StateVacuumEntity):
     async def async_return_to_base(self, **kwargs) -> None:
         await self.hass.async_add_executor_job(self._device.return_home)
         self.coordinator.async_schedule_confirm()
+
+    # --- native clean area (HA segments) ------------------------------------
+    def _floor_rooms(self) -> tuple[dict[int, tuple[str, dict[int, str]]], int | None]:
+        """({map_id: (floor name, {room id: name})}, active map id)."""
+        saved = self._saved_map()
+        if saved is not None:
+            return saved.floor_rooms, saved.active_map_id
+        coord = self._entry.runtime_data.map
+        data = getattr(coord, "data", None)
+        if data is None or data.map_id is None:
+            return {}, None
+        rooms = data.attributes.get("rooms") or {}
+        items = rooms.values() if isinstance(rooms, dict) else rooms
+        names = {}
+        for r in items:
+            rid = r.get("room_id", r.get("id"))
+            if rid is not None:
+                names[int(rid)] = str(r.get("name") or f"Room {rid}")
+        return {int(data.map_id): ("", names)}, int(data.map_id)
+
+    def _segment_list(self) -> list:
+        floors, _ = self._floor_rooms()
+        multi = len(floors) > 1
+        return [Segment(id=f"{mid}_{rid}", name=name or f"Room {rid}",
+                        group=floor if multi else None)
+                for mid, (floor, rooms) in floors.items()
+                for rid, name in sorted(rooms.items())]
+
+    async def async_get_segments(self) -> list:
+        """Rooms of every saved floor; id = "<map id>_<room id>"."""
+        return self._segment_list()
+
+    async def async_clean_segments(self, segment_ids: list[str], **kwargs) -> None:
+        """vacuum.clean_area (areas mapped to rooms in the HA UI) → room clean."""
+        floors, active = self._floor_rooms()
+        wanted: dict[int, list[int]] = {}
+        for sid in segment_ids:
+            try:
+                mid, rid = (int(x) for x in str(sid).split("_", 1))
+            except ValueError as err:
+                raise HomeAssistantError(f"Unknown room segment {sid!r}") from err
+            wanted.setdefault(mid, []).append(rid)
+        other = [m for m in wanted if m != active]
+        if other:
+            names = ", ".join(floors.get(m, (f"Map {m}", {}))[0] or f"Map {m}" for m in other)
+            here = floors.get(active, ("", {}))[0] or f"Map {active}"
+            raise HomeAssistantError(
+                f"Those rooms are on floor {names}, the robot is on {here}. Carry the "
+                "robot there and switch the Active map first.")
+        if not wanted.get(active):
+            raise HomeAssistantError("No rooms to clean")
+        await self.async_clean_segment(wanted[active])
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        coord = self._entry.runtime_data.map
+        if _CLEAN_AREA is not None and coord is not None:
+            self.async_on_remove(coord.async_add_listener(self._check_segments))
+            self._check_segments()
+
+    def _check_segments(self) -> None:
+        """Raise HA's "segments changed" repair when the rooms differ from the
+        ones the user mapped to areas (e.g. after re-mapping the home)."""
+        if self.registry_entry is None:
+            return
+        current = self._segment_list()
+        sig = tuple(sorted((s.id, s.name) for s in current))
+        if not sig or sig == self._segment_sig:
+            return
+        self._segment_sig = sig
+        seen = self.last_seen_segments
+        if seen is not None and {s.id for s in seen} != {s.id for s in current}:
+            self.async_create_segments_issue()
 
     def _saved_map(self):
         """The SavedMapCoordinator when this entry runs in local+saved-map mode."""

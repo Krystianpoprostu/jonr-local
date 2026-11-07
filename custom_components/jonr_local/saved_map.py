@@ -243,6 +243,12 @@ class SavedMapCoordinator(DataUpdateCoordinator[MapResult]):
         return self._active
 
     @property
+    def floor_rooms(self) -> dict[int, tuple[str, dict[int, str]]]:
+        """{map_id: (floor name, {room id: room name})} for every saved floor."""
+        return {mid: (v.map_name or f"Map {mid}", dict(v.room_names))
+                for mid, v in sorted(self._views.items())}
+
+    @property
     def room_ids(self) -> set[int]:
         return set(self.view.room_names) if self.view else set()
 

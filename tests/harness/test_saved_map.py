@@ -500,3 +500,55 @@ async def test_legacy_single_map_store_still_loads(hass: HomeAssistant, no_cloud
     await hass.async_block_till_done()
     rooms = hass.states.get(_ids(hass, "camera")[0]).attributes["rooms"]
     assert rooms["3"]["prefer"]["wind"] == 3
+
+
+# --- native clean area: HA areas -> saved-map rooms (voice: "clean the kitchen") ---
+async def test_clean_area_maps_areas_to_rooms(hass: HomeAssistant, hass_ws_client, no_cloud, miot) -> None:
+    from homeassistant.components.vacuum import VacuumEntityFeature
+    from homeassistant.helpers import area_registry as ar, entity_registry as er, issue_registry as ir
+
+    entry = await _setup(hass, miot)
+    vac = _ids(hass, "vacuum")[0]
+    feats = hass.states.get(vac).attributes["supported_features"]
+    assert feats & VacuumEntityFeature.CLEAN_AREA
+    await hass.services.async_call(
+        DOMAIN, "import_map",
+        {"entity_id": vac, "map_raw": synthetic_map(), "map_infos_raw": INFOS, "source": "test"},
+        blocking=True, return_response=True)
+    await hass.async_block_till_done()
+
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": "vacuum/get_segments", "entity_id": vac})
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert [(s["id"], s["name"]) for s in msg["result"]["segments"]] == [("3_3", "Room A"), ("3_4", "Room B")]
+
+    kitchen = ar.async_get(hass).async_create("Kuchnia")
+    ent_reg = er.async_get(hass)
+    ent_reg.async_update_entity_options(vac, "vacuum", {
+        "area_mapping": {kitchen.id: ["3_4"]},
+        "last_seen_segments": [{"id": "3_3", "name": "Room A", "group": None},
+                               {"id": "3_4", "name": "Room B", "group": None}],
+    })
+    await hass.async_block_till_done()
+    miot.call_action_by.reset_mock()
+    with patch("custom_components.jonr_local.device.time.sleep"):
+        await hass.services.async_call("vacuum", "clean_area",
+                                       {"entity_id": vac, "cleaning_area_id": [kitchen.id]}, blocking=True)
+    sent = [c.args for c in miot.call_action_by.call_args_list]
+    assert (17, 1, [{"did": "-", "piid": 8, "value": 3},
+                    {"did": "-", "piid": 34, "value": "[4]"}]) in sent
+    assert not [c for c in sent if c[:2] == (17, 1) and c[2][0]["value"] != 3]   # never a whole-home start
+
+    # A segment on another floor is refused instead of cleaning the wrong rooms.
+    ent = hass.data["entity_components"]["vacuum"].get_entity(vac)
+    with pytest.raises(HomeAssistantError, match="floor"):
+        await ent.async_clean_segments(["9_4"])
+    # Segments changed vs. what the user mapped -> HA's repair issue.
+    ent_reg.async_update_entity_options(vac, "vacuum", {
+        "area_mapping": {kitchen.id: ["3_4"]},
+        "last_seen_segments": [{"id": "3_3", "name": "Room A", "group": None}]})
+    ent._segment_sig = None
+    ent._check_segments()
+    assert [i for i in ir.async_get(hass).issues if i[0] == "vacuum"]
+    assert entry.state is ConfigEntryState.LOADED
