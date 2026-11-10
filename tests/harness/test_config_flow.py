@@ -710,3 +710,68 @@ async def test_local_step_duplicate_unique_id_aborts(hass: HomeAssistant) -> Non
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+# --- reconfigure: change the robot's IP address in place -----------------
+
+MAC = "AA:BB:CC:DD:EE:FF"
+
+
+def _reconf_entry(hass: HomeAssistant) -> MockConfigEntry:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=MAC,
+        data={CONF_HOST: "192.168.1.10", CONF_TOKEN: TOKEN,
+              CONF_MODEL: "xtl.vacuum.xm2216", "mac": MAC, "map_mode": "saved"},
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def test_reconfigure_updates_host(hass: HomeAssistant) -> None:
+    entry = _reconf_entry(hass)
+    form = await entry.start_reconfigure_flow(hass)
+    assert form["type"] is FlowResultType.FORM
+    assert form["step_id"] == "reconfigure"
+    with patch(
+        "custom_components.jonr_local.config_flow._probe",
+        return_value={"model": "xtl.vacuum.xm2216", "mac": MAC.lower()},
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            form["flow_id"], {CONF_HOST: " 192.168.1.77 "}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_HOST] == "192.168.1.77"
+    assert entry.data[CONF_TOKEN] == TOKEN
+    assert entry.data["map_mode"] == "saved"
+
+
+async def test_reconfigure_unreachable_keeps_host(hass: HomeAssistant) -> None:
+    entry = _reconf_entry(hass)
+    form = await entry.start_reconfigure_flow(hass)
+    with patch(
+        "custom_components.jonr_local.config_flow._probe",
+        side_effect=OSError("timeout"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            form["flow_id"], {CONF_HOST: "192.168.1.77"}
+        )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect_saved"}
+    assert entry.data[CONF_HOST] == "192.168.1.10"
+
+
+async def test_reconfigure_rejects_other_robot(hass: HomeAssistant) -> None:
+    entry = _reconf_entry(hass)
+    form = await entry.start_reconfigure_flow(hass)
+    with patch(
+        "custom_components.jonr_local.config_flow._probe",
+        return_value={"model": "xtl.vacuum.xm2216", "mac": "11:22:33:44:55:66"},
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            form["flow_id"], {CONF_HOST: "192.168.1.77"}
+        )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_device"
+    assert entry.data[CONF_HOST] == "192.168.1.10"

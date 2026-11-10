@@ -44,6 +44,10 @@ downloaded once. The password and the Xiaomi session are not stored; the
 entry carries only IP, token, model, MAC and the map mode. If the map download
 fails, a Repairs entry explains how to get it later.
 
+If the robot's IP address changes later, use *JONR Local → ⋮ → Reconfigure*:
+the new address is probed with the stored token and must answer with the
+same MAC before it is saved; nothing else in the entry changes.
+
 **Without signing in from HA (advanced).**
 
 1. `tools/get_token.py` (QR login with the Mi Home app; the token goes to

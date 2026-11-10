@@ -261,6 +261,44 @@ class JonrVacuumConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"guide_url": GUIDE_URL},
         )
 
+    # --- reconfigure: robot got a new LAN address --------------------------
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change the robot's IP address in place (entry menu → Reconfigure).
+
+        The new address is probed with the stored token before it is saved,
+        and the answering robot must be the same one (MAC), so a typo can't
+        point the entry at another device. Map, options and entity ids stay."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = user_input[CONF_HOST].strip()
+            try:
+                info = await self.hass.async_add_executor_job(
+                    _probe, host, entry.data[CONF_TOKEN]
+                )
+            except Exception:  # noqa: BLE001
+                errors["base"] = "cannot_connect_saved"
+            else:
+                old_mac = (entry.data.get(CONF_MAC) or "").lower()
+                new_mac = (info["mac"] or "").lower()
+                if old_mac and new_mac and old_mac != new_mac:
+                    return self.async_abort(reason="wrong_device")
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_HOST: host}
+                )
+        schema = self.add_suggested_values_to_schema(
+            vol.Schema({vol.Required(CONF_HOST): cv.string}),
+            user_input or {CONF_HOST: entry.data.get(CONF_HOST, "")},
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"current": entry.data.get(CONF_HOST, "")},
+        )
+
     # --- reauth: cloud session died and passToken renewal failed --------
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]

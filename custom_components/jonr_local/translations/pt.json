@@ -102,6 +102,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "Alterar o endereço IP do robô",
+        "description": "Endereço atual: **{current}**. Introduza o novo (dica: reserve um endereço fixo para o robô no router). É verificado com o robô antes de guardar; o mapa, as definições e as entidades mantêm-se.",
+        "data": {
+          "host": "Endereço IP do robô"
+        }
       }
     },
     "error": {
@@ -117,7 +124,9 @@
       "login_failed": "A Xiaomi recusou ({reason}). Verifique o seu e-mail e palavra-passe, depois tente novamente.",
       "no_devices": "Não há aspiradores suportados nesta conta.",
       "unsupported_model": "Este modelo ainda não é suportado (apenas JONR xtl.vacuum.xm2216).",
-      "login_verification_required": "A Xiaomi bloqueou este início de sessão e quer verificar a conta. Inicie sessão em account.xiaomi.com (ou na app Xiaomi Home), conclua a verificação pedida e tente novamente."
+      "login_verification_required": "A Xiaomi bloqueou este início de sessão e quer verificar a conta. Inicie sessão em account.xiaomi.com (ou na app Xiaomi Home), conclua a verificação pedida e tente novamente.",
+      "reconfigure_successful": "Endereço IP atualizado. A integração foi recarregada.",
+      "wrong_device": "Outro robô responde nesse endereço (o MAC não corresponde). Nada foi alterado."
     },
     "progress": {
       "miot_oauth_auth": "Abra [Xiaomi OAuth]({authorize_url}) num novo separador. Após a aprovação, a Xiaomi deverá regressar ao Home Assistant e este passo continuará automaticamente."

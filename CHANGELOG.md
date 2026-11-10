@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.4 — 2026-11-10
+
+Change the robot's IP address from Home Assistant.
+
+- *Settings → Devices & services → JONR Local → ⋮ → Reconfigure* asks for
+  the new address. It is probed with the stored token and must answer with
+  the same MAC before it is saved, so a typo or another device can't take
+  over the entry. Only the address changes; map, settings and entity ids
+  stay, and the integration reloads.
+- Texts in all 15 languages.
+
 ## 0.3.3 — 2026-11-07
 
 Map card: rooms only on the floor the robot is on.

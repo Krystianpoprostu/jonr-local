@@ -102,6 +102,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "IP-Adresse des Roboters ändern",
+        "description": "Aktuelle Adresse: **{current}**. Gib die neue ein (Tipp: reserviere dem Roboter im Router eine feste Adresse). Sie wird vor dem Speichern am Roboter geprüft; Karte, Einstellungen und Entitäten bleiben erhalten.",
+        "data": {
+          "host": "IP-Adresse des Roboters"
+        }
       }
     },
     "error": {
@@ -117,7 +124,9 @@
       "login_failed": "Xiaomi lehnt das ab ({reason}). Überprüfen Sie Ihre E-Mail und Ihr Passwort und versuchen Sie es erneut.",
       "no_devices": "Keine unterstützten Staubsauger auf diesem Konto.",
       "unsupported_model": "Dieses Modell wird noch nicht unterstützt (nur JONR xtl.vacuum.xm2216).",
-      "login_verification_required": "Xiaomi hat diese Anmeldung blockiert und möchte das Konto verifizieren. Melden Sie sich unter account.xiaomi.com (oder in der Xiaomi-Home-App) an, schließen Sie die dort verlangte Überprüfung ab und versuchen Sie es erneut."
+      "login_verification_required": "Xiaomi hat diese Anmeldung blockiert und möchte das Konto verifizieren. Melden Sie sich unter account.xiaomi.com (oder in der Xiaomi-Home-App) an, schließen Sie die dort verlangte Überprüfung ab und versuchen Sie es erneut.",
+      "reconfigure_successful": "IP-Adresse aktualisiert. Die Integration wurde neu geladen.",
+      "wrong_device": "Unter dieser Adresse antwortet ein anderer Roboter (MAC stimmt nicht überein). Es wurde nichts geändert."
     },
     "progress": {
       "miot_oauth_auth": "Öffnen Sie [Xiaomi OAuth]({authorize_url}) in einem neuen Tab. Nach der Genehmigung kehrt Xiaomi zu Home Assistant zurück und dieser Schritt fährt automatisch fort."

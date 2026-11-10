@@ -103,6 +103,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "로봇 IP 주소 변경",
+        "description": "현재 주소: **{current}**. 새 주소를 입력하세요(라우터에서 로봇에 고정 주소를 할당하는 것을 권장합니다). 저장하기 전에 로봇과 연결을 확인하며, 지도, 설정, 엔터티는 그대로 유지됩니다.",
+        "data": {
+          "host": "로봇 IP 주소"
+        }
       }
     },
     "error": {
@@ -121,7 +128,9 @@
       "login_failed": "Xiaomi cloud sign-in failed ({reason}). Check your email and password, then try again.",
       "login_verification_required": "Xiaomi blocked this sign-in and wants the account verified. Sign in at account.xiaomi.com (or the Xiaomi Home app), complete any verification it asks for, then try again.",
       "no_devices": "No supported vacuums on this account.",
-      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only)."
+      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only).",
+      "reconfigure_successful": "IP 주소가 업데이트되었습니다. 통합이 다시 로드되었습니다.",
+      "wrong_device": "해당 주소에서 다른 로봇이 응답합니다(MAC 불일치). 아무것도 변경되지 않았습니다."
     }
   },
   "options": {

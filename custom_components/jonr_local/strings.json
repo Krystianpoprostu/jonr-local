@@ -103,6 +103,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "Change the robot's IP address",
+        "description": "Current address: **{current}**. Enter the new one (tip: reserve a fixed address for the robot on your router). It is checked against the robot before saving; the map, settings and entities stay as they are.",
+        "data": {
+          "host": "Robot IP address"
+        }
       }
     },
     "error": {
@@ -121,7 +128,9 @@
       "login_failed": "Xiaomi cloud sign-in failed ({reason}). Check your email and password, then try again.",
       "login_verification_required": "Xiaomi blocked this sign-in and wants the account verified. Sign in at account.xiaomi.com (or the Xiaomi Home app), complete any verification it asks for, then try again.",
       "no_devices": "No supported vacuums on this account.",
-      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only)."
+      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only).",
+      "reconfigure_successful": "IP address updated. The integration has been reloaded.",
+      "wrong_device": "A different robot answers at that address (MAC doesn't match). Nothing was changed."
     }
   },
   "options": {

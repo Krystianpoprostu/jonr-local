@@ -103,6 +103,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "變更機器人 IP 位址",
+        "description": "目前位址：**{current}**。請輸入新位址（建議在路由器上為機器人保留固定位址）。儲存前會連線機器人進行驗證；地圖、設定和實體保持不變。",
+        "data": {
+          "host": "機器人 IP 位址"
+        }
       }
     },
     "error": {
@@ -121,7 +128,9 @@
       "login_failed": "Xiaomi cloud sign-in failed ({reason}). Check your email and password, then try again.",
       "login_verification_required": "Xiaomi blocked this sign-in and wants the account verified. Sign in at account.xiaomi.com (or the Xiaomi Home app), complete any verification it asks for, then try again.",
       "no_devices": "No supported vacuums on this account.",
-      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only)."
+      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only).",
+      "reconfigure_successful": "IP 位址已更新，整合已重新載入。",
+      "wrong_device": "該位址上回應的是另一台機器人（MAC 不符），未做任何變更。"
     }
   },
   "options": {

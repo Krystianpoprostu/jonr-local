@@ -103,6 +103,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "Đổi địa chỉ IP của robot",
+        "description": "Địa chỉ hiện tại: **{current}**. Nhập địa chỉ mới (mẹo: đặt địa chỉ cố định cho robot trên router). Địa chỉ được kiểm tra với robot trước khi lưu; bản đồ, cài đặt và thực thể được giữ nguyên.",
+        "data": {
+          "host": "Địa chỉ IP của robot"
+        }
       }
     },
     "error": {
@@ -121,7 +128,9 @@
       "login_failed": "Xiaomi cloud sign-in failed ({reason}). Check your email and password, then try again.",
       "login_verification_required": "Xiaomi blocked this sign-in and wants the account verified. Sign in at account.xiaomi.com (or the Xiaomi Home app), complete any verification it asks for, then try again.",
       "no_devices": "No supported vacuums on this account.",
-      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only)."
+      "unsupported_model": "This model isn't supported yet (JONR xtl.vacuum.xm2216 only).",
+      "reconfigure_successful": "Đã cập nhật địa chỉ IP. Tích hợp đã được tải lại.",
+      "wrong_device": "Một robot khác trả lời ở địa chỉ đó (MAC không khớp). Không có gì thay đổi."
     }
   },
   "options": {

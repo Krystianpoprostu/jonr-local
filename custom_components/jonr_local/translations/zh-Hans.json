@@ -102,6 +102,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "更改机器人 IP 地址",
+        "description": "当前地址：**{current}**。请输入新地址（建议在路由器上为机器人保留固定地址）。保存前会连接机器人进行验证；地图、设置和实体保持不变。",
+        "data": {
+          "host": "机器人 IP 地址"
+        }
       }
     },
     "error": {
@@ -117,7 +124,9 @@
       "login_failed": "小米拒绝了（{reason}）。请检查您的电子邮件和密码，然后重试。",
       "no_devices": "此账户中没有支持的吸尘器。",
       "unsupported_model": "目前不支持此型号（仅限 JONR xtl.vacuum.xm2216）。",
-      "login_verification_required": "小米已阻止此次登录并要求验证账户。请在 account.xiaomi.com（或小米智能家居应用）登录，完成所需的验证，然后重试。"
+      "login_verification_required": "小米已阻止此次登录并要求验证账户。请在 account.xiaomi.com（或小米智能家居应用）登录，完成所需的验证，然后重试。",
+      "reconfigure_successful": "IP 地址已更新，集成已重新加载。",
+      "wrong_device": "该地址上应答的是另一台机器人（MAC 不匹配），未做任何更改。"
     },
     "progress": {
       "miot_oauth_auth": "在新标签页打开 [小米 OAuth]({authorize_url})。批准后，小米应返回 Home Assistant，此步骤将自动继续。"

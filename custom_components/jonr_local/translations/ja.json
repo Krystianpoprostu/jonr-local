@@ -102,6 +102,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "ロボットの IP アドレスを変更",
+        "description": "現在のアドレス: **{current}**。新しいアドレスを入力してください(ルーターでロボットに固定アドレスを割り当てることをおすすめします)。保存前にロボットに接続して確認します。マップ、設定、エンティティはそのまま残ります。",
+        "data": {
+          "host": "ロボットの IP アドレス"
+        }
       }
     },
     "error": {
@@ -117,7 +124,9 @@
       "login_failed": "Xiaomiが拒否しました（{reason}）。メールとパスワードを確認して、もう一度試してください。",
       "no_devices": "このアカウントにはサポートされているロボット掃除機がありません。",
       "unsupported_model": "このモデルはまだサポートされていません（JONR xtl.vacuum.xm2216 のみ）。",
-      "login_verification_required": "Xiaomiがこのサインインをブロックし、アカウントの確認を求めています。account.xiaomi.com（またはXiaomi Homeアプリ）でサインインし、指示される確認を完了してから再試行してください。"
+      "login_verification_required": "Xiaomiがこのサインインをブロックし、アカウントの確認を求めています。account.xiaomi.com（またはXiaomi Homeアプリ）でサインインし、指示される確認を完了してから再試行してください。",
+      "reconfigure_successful": "IP アドレスを更新しました。統合を再読み込みしました。",
+      "wrong_device": "そのアドレスでは別のロボットが応答しています(MAC が一致しません)。何も変更されていません。"
     },
     "progress": {
       "miot_oauth_auth": "新しいタブで [Xiaomi OAuth]({authorize_url}) を開いてください。承認後、XiaomiがHome Assistantに戻ると、このステップが自動的に続行されます。"

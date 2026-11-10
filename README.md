@@ -69,6 +69,8 @@ and restart.
 robot online until Mi Home shows the new map, then *JONR Local → Configure →
 Download / refresh the map from your Xiaomi account*.
 
+**The robot got a new IP address:** *Settings → Devices & services → JONR Local → ⋮ → Reconfigure* and enter the new address. It is checked against the robot (same token, same MAC) before it is saved; the map, settings and entity ids stay.
+
 If the map is missing (e.g. the download failed during setup), Home Assistant
 shows a **Repairs** entry with these steps.
 

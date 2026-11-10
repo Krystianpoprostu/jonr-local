@@ -103,6 +103,13 @@
           "host": "Robot IP address",
           "name": "Device name"
         }
+      },
+      "reconfigure": {
+        "title": "Modifier l'adresse IP du robot",
+        "description": "Adresse actuelle : **{current}**. Saisissez la nouvelle (astuce : réservez une adresse fixe pour le robot sur votre routeur). Elle est vérifiée auprès du robot avant l'enregistrement ; la carte, les réglages et les entités sont conservés.",
+        "data": {
+          "host": "Adresse IP du robot"
+        }
       }
     },
     "error": {
@@ -121,7 +128,9 @@
       "login_failed": "Xiaomi a refusé ({reason}). Vérifiez votre e-mail et mot de passe, puis réessayez.",
       "login_verification_required": "Xiaomi a bloqué cette connexion et demande une vérification du compte. Connectez-vous sur account.xiaomi.com (ou dans l'app Xiaomi Home), effectuez la vérification demandée, puis réessayez.",
       "no_devices": "Aucun aspirateur supporté sur ce compte.",
-      "unsupported_model": "Ce modèle n'est pas encore supporté (JONR xtl.vacuum.xm2216 uniquement)."
+      "unsupported_model": "Ce modèle n'est pas encore supporté (JONR xtl.vacuum.xm2216 uniquement).",
+      "reconfigure_successful": "Adresse IP mise à jour. L'intégration a été rechargée.",
+      "wrong_device": "Un autre robot répond à cette adresse (l'adresse MAC ne correspond pas). Rien n'a été modifié."
     }
   },
   "options": {

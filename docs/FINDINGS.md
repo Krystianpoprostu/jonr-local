@@ -310,3 +310,14 @@ Użytkownik oczekiwał nowej integracji, a nie podmienionego `jonr_vac`. Zrobion
   `test_clean_segment_refuses_rooms_of_another_floor`. Cały zestaw: 402 OK / 30 FAIL / 2 ERROR, zestaw niepowodzeń
   identyczny jak przed zmianami. Prawdziwe przełączanie pięter na robocie nadal NIE jest przetestowane (jedna
   mapa).
+
+### Etap 11: zmiana IP robota z HA (v0.3.4, 2026-11-10)
+- Zmiana: krok `reconfigure` w config flow (menu wpisu → „Ponownie skonfiguruj”). Pole z obecnym IP; nowy adres
+  sprawdzany `_probe` z zapisanym tokenem, MAC musi się zgadzać (inaczej abort `wrong_device`), potem
+  `async_update_reload_and_abort(data_updates={host})`. Mapa, opcje, encje bez zmian. Teksty w 15 językach.
+- Testy: 3 nowe w `tests/harness/test_config_flow.py` (sukces, brak odpowiedzi, inny robot) — przechodzą.
+  System ma już tylko Python 3.15 (numpy 2.3.2 bez koła), więc testy HA 2026.10.4 uruchomione w tymczasowym
+  kontenerze `python:3.14` (usunięty po teście). W tym środowisku 24 testy harness padają identycznie przed i po
+  zmianie (setup wpisu w teście zwraca False) — do zbadania osobno. Pure: 333 OK.
+- Wdrożenie: backup `/config/backup_jonr/jonr_local-20261110-203953`, check_config valid, restart, wpis
+  `loaded`, log czysty, `supports_reconfigure=True`. Samej zmiany IP na żywym robocie nie wykonywano.
